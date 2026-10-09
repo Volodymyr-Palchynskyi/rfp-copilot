@@ -1,0 +1,212 @@
+<div class="layout">
+  <form class="panel form" (submit)="$event.preventDefault(); generate()">
+    <h2>New proposal</h2>
+
+    <div class="samples">
+      <span class="muted">Try a sample:</span>
+      @for (sample of samples; track sample.label) {
+        <button type="button" class="chip" [disabled]="running()" (click)="useSample(sample)">{{ sample.label }}</button>
+      }
+    </div>
+
+    <label>
+      <span>Client</span>
+      <input type="text" [value]="clientName()" (input)="clientName.set($any($event.target).value)" [disabled]="running()" />
+    </label>
+
+    <label>
+      <span>Project brief</span>
+      <textarea
+        rows="9"
+        placeholder="Requirements, constraints, integrations, expected users..."
+        [value]="description()"
+        (input)="description.set($any($event.target).value)"
+        [disabled]="running()"
+      ></textarea>
+      <small class="muted">At least 20 characters. The more concrete, the better the analogies.</small>
+    </label>
+
+    <div class="row">
+      <label>
+        <span>Budget tier</span>
+        <select [value]="budget()" (change)="budget.set($any($event.target).value)" [disabled]="running()">
+          @for (b of budgets; track b) {
+            <option [value]="b" [selected]="b === budget()">{{ b }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        <span>Target weeks</span>
+        <input
+          type="number"
+          min="1"
+          placeholder="optional"
+          [value]="timelineWeeks() ?? ''"
+          (input)="onTimeline($any($event.target).value)"
+          [disabled]="running()"
+        />
+      </label>
+    </div>
+
+    <div class="actions">
+      @if (running()) {
+        <button type="button" class="secondary" (click)="cancel()">Cancel</button>
+      } @else {
+        <button type="submit" class="primary" [disabled]="!canSubmit()">Generate proposal</button>
+      }
+    </div>
+  </form>
+
+  <section class="results" aria-live="polite">
+    @if (!started()) {
+      <div class="empty panel">
+        <h2>RFP Proposal Copilot</h2>
+        <p>
+          Describe a client project and get a structured technical proposal. Estimates are grounded in similar
+          projects from your own delivery history, and you can see exactly which ones were used.
+        </p>
+      </div>
+    }
+
+    @if (status() === 'error') {
+      <div class="banner error" role="alert">{{ error() }}</div>
+    }
+    @if (status() === 'cancelled') {
+      <div class="banner">Generation cancelled. Whatever arrived so far is shown below.</div>
+    }
+
+    @if (started()) {
+      <div class="panel references">
+        <h3>Based on your past projects</h3>
+        @if (retrievedReferences()) {
+          <ul>
+            @for (ref of references(); track ref.project_id) {
+              <li>
+                <div class="ref-head">
+                  <strong>{{ ref.title }}</strong>
+                  <span class="muted">{{ ref.total_hours | number }} h · {{ ref.duration_weeks }} weeks</span>
+                </div>
+                <div class="bar" [attr.aria-label]="'Relevance ' + (ref.relevance_score * 100 | number: '1.0-0') + '%'">
+                  <span [style.width.%]="ref.relevance_score * 100"></span>
+                </div>
+                <small class="muted">
+                  {{ ref.industry }} · {{ ref.stack }} · matched: {{ ref.matched_sections.join(', ') }}
+                </small>
+              </li>
+            }
+          </ul>
+        } @else if (running() && !draft().project_title) {
+          <p class="muted pulse">Searching past projects...</p>
+        } @else {
+          <p class="muted">
+            No sufficiently similar past project was found, so this estimate is built from general experience only.
+          </p>
+        }
+      </div>
+
+      @if (draft().project_title; as title) {
+        <article class="panel proposal">
+          <header>
+            <h2>{{ title }}</h2>
+            <div class="totals">
+              <div>
+                <span class="muted">Effort</span>
+                <strong>{{ totals().min | number }} - {{ totals().max | number }} h</strong>
+              </div>
+              @if (draft().estimated_duration_weeks; as weeks) {
+                <div>
+                  <span class="muted">Duration</span>
+                  <strong>{{ weeks }} weeks</strong>
+                </div>
+              }
+            </div>
+          </header>
+
+          @if (draft().executive_summary; as summary) {
+            <h3>Executive summary</h3>
+            <p class="prose">{{ summary }}</p>
+          }
+
+          @if (draft().architecture_overview; as architecture) {
+            <h3>Architecture</h3>
+            <p class="prose">{{ architecture }}</p>
+          }
+
+          @if (draft().tech_stack?.length) {
+            <h3>Tech stack</h3>
+            <ul class="stack">
+              @for (item of draft().tech_stack; track $index) {
+                <li>
+                  <span class="tag">{{ item.category }}</span>
+                  <strong>{{ item.name }}</strong>
+                  <span class="muted">{{ item.reason }}</span>
+                </li>
+              }
+            </ul>
+          }
+
+          @if (draft().features?.length) {
+            <h3>Scope and estimates</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Module</th>
+                    <th>Feature</th>
+                    <th>Complexity</th>
+                    <th class="num">Hours</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (f of draft().features; track $index) {
+                    <tr>
+                      <td>{{ f.module }}</td>
+                      <td>
+                        <strong>{{ f.title }}</strong>
+                        <div class="muted">{{ f.description }}</div>
+                      </td>
+                      <td>
+                        @if (f.complexity) {
+                          <span class="tag" [class]="'tag ' + f.complexity">{{ f.complexity }}</span>
+                        }
+                      </td>
+                      <td class="num">{{ f.hours_min ?? '…' }} - {{ f.hours_max ?? '…' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          @if (draft().risks?.length) {
+            <h3>Risks</h3>
+            <ul class="risks">
+              @for (r of draft().risks; track $index) {
+                <li>
+                  <div>
+                    @if (r.impact) {
+                      <span class="tag" [class]="'tag ' + r.impact">{{ r.impact }}</span>
+                    }
+                    <strong>{{ r.risk }}</strong>
+                  </div>
+                  <div class="muted">{{ r.mitigation }}</div>
+                </li>
+              }
+            </ul>
+          }
+
+          @if (draft().estimation_basis; as basis) {
+            <h3>How the estimate was derived</h3>
+            <p class="prose">{{ basis }}</p>
+          }
+
+          @if (running()) {
+            <p class="muted pulse">Writing...</p>
+          }
+        </article>
+      } @else if (running()) {
+        <div class="panel"><p class="muted pulse">Drafting the proposal...</p></div>
+      }
+    }
+  </section>
+</div>

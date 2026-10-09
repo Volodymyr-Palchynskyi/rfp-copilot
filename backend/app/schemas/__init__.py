@@ -1,2 +1,3 @@
-def main() -> None:
-    print("Hello from backend!")
+from app.schemas.proposal import ProposalRequest, ProposalResponse
+
+__all__ = ["ProposalRequest", "ProposalResponse"]

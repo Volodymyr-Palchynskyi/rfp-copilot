@@ -1,0 +1,18 @@
+# IDEs
+.idea/
+.vscode/*
+!.vscode/settings.json
+
+# Python
+**/__pycache__/
+*.py[cod]
+/backend/.venv/
+/backend/.env
+*.env
+*.env.*
+!.env.example
+
+# Frontend
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.angular/

@@ -1,0 +1,137 @@
+{
+  "rank": {
+    "cases": 9,
+    "hit@1": 1.0,
+    "hit@3": 1.0,
+    "mrr": 1.0
+  },
+  "sweep": [
+    {
+      "threshold": 0.5,
+      "recall": 1.0,
+      "precision": 0.3333333333333333,
+      "abstention": 0.0
+    },
+    {
+      "threshold": 0.55,
+      "recall": 1.0,
+      "precision": 0.3333333333333333,
+      "abstention": 0.0
+    },
+    {
+      "threshold": 0.6,
+      "recall": 1.0,
+      "precision": 0.36,
+      "abstention": 0.0
+    },
+    {
+      "threshold": 0.65,
+      "recall": 1.0,
+      "precision": 0.6,
+      "abstention": 0.5
+    },
+    {
+      "threshold": 0.7,
+      "recall": 1.0,
+      "precision": 1.0,
+      "abstention": 1.0
+    },
+    {
+      "threshold": 0.75,
+      "recall": 0.0,
+      "precision": 0.0,
+      "abstention": 1.0
+    }
+  ],
+  "selection": {
+    "threshold": {
+      "recall": 1.0,
+      "precision": 1.0,
+      "abstention": 1.0,
+      "mean_latency_s": 0.39014631538471944,
+      "kept": {
+        "n01": [
+          "001-logistics-fleet-portal"
+        ],
+        "n02": [
+          "003-ecommerce-b2b-marketplace"
+        ],
+        "n03": [
+          "006-saas-analytics-dashboard"
+        ],
+        "n04": [
+          "005-hr-internal-ai-assistant"
+        ],
+        "n05": [
+          "002-fintech-kyc-onboarding"
+        ],
+        "n06": [
+          "004-healthcare-patient-app"
+        ],
+        "n07": [
+          "008-mobile-field-service"
+        ],
+        "n08": [
+          "007-edtech-lms"
+        ],
+        "n09": [
+          "005-hr-internal-ai-assistant"
+        ],
+        "n10": [],
+        "n11": [],
+        "n12": [],
+        "n13": []
+      }
+    },
+    "rerank": {
+      "recall": 1.0,
+      "precision": 0.9,
+      "abstention": 0.5,
+      "mean_latency_s": 4.497738584615245,
+      "kept": {
+        "n01": [
+          "001-logistics-fleet-portal"
+        ],
+        "n02": [
+          "003-ecommerce-b2b-marketplace"
+        ],
+        "n03": [
+          "006-saas-analytics-dashboard"
+        ],
+        "n04": [
+          "005-hr-internal-ai-assistant"
+        ],
+        "n05": [
+          "002-fintech-kyc-onboarding"
+        ],
+        "n06": [
+          "004-healthcare-patient-app",
+          "008-mobile-field-service"
+        ],
+        "n07": [
+          "008-mobile-field-service"
+        ],
+        "n08": [
+          "007-edtech-lms"
+        ],
+        "n09": [
+          "005-hr-internal-ai-assistant"
+        ],
+        "n10": [],
+        "n11": [
+          "004-healthcare-patient-app"
+        ],
+        "n12": [
+          "007-edtech-lms",
+          "006-saas-analytics-dashboard"
+        ],
+        "n13": []
+      }
+    }
+  },
+  "top_by_category": {
+    "close_analog": 0.7333850506038252,
+    "partial_overlap": 0.7177744366998364,
+    "no_analog": 0.66115992527829
+  }
+}

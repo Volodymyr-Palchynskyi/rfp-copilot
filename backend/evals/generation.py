@@ -41,6 +41,8 @@ async def _generate(service: ProposalService, case: Case) -> tuple[ProposalRespo
             return await service.generate_proposal(request), time.perf_counter() - start, None
         except Exception as exc:  # noqa: BLE001 - eval harness records any failure
             error = f"{type(exc).__name__}: {exc}"
+            if "PerDay" in str(exc):  # daily quota is gone, retrying only burns time
+                break
             await asyncio.sleep(2 * (attempt + 1))
     return None, 0.0, error
 
@@ -61,7 +63,7 @@ def _score(case: Case, response: ProposalResponse, names: dict[str, str]) -> dic
     }
 
 
-async def run(case_set: str = "main") -> None:
+async def run(case_set: str = "main", variant: str = "") -> None:
     cases = load_cases(case_set)
     names = _corpus_names()
 
@@ -107,7 +109,7 @@ async def run(case_set: str = "main") -> None:
 
     headers = ["category", "mode", "n", "in range", "median error", "cites refs", "fabricated refs", "latency"]
     table_rows = [row_for("all", m, None) for m in services]
-    for cat in CATEGORIES:
+    for cat in (c for c in CATEGORIES if any(case.category == c for case in cases)):
         table_rows += [row_for(cat, m, cat) for m in services]
 
     title = "Generation eval" + ("" if case_set == "main" else f" ({case_set} set)")
@@ -132,4 +134,4 @@ async def run(case_set: str = "main") -> None:
         md += f"\n\n## Failures ({len(failed)})\n\n" + "\n".join(f"- {r['case']} / {r['mode']}: {r['error']}" for r in failed)
 
     print(md)
-    save_report(result_name("generation", case_set), md, {"model": settings.GEMINI_MODEL, "rows": rows})
+    save_report(result_name("generation", case_set, variant), md, {"model": settings.GEMINI_MODEL, "rows": rows})

@@ -6,7 +6,7 @@ from pathlib import Path
 EVALS_DIR = Path(__file__).parent
 RESULTS_DIR = EVALS_DIR / "results"
 
-CATEGORIES = ["close_analog", "partial_overlap", "out_of_domain"]
+CATEGORIES = ["close_analog", "partial_overlap", "out_of_domain", "no_analog"]
 
 
 @dataclass(frozen=True)
@@ -22,11 +22,12 @@ class Case:
         return sum(self.hours_range) / 2
 
 
-CASE_FILES = {"main": "cases.json", "heldout": "cases_heldout.json"}
+CASE_FILES = {"main": "cases.json", "heldout": "cases_heldout.json", "fresh": "cases_fresh.json"}
 
 
-def result_name(suite: str, case_set: str) -> str:
-    return suite if case_set == "main" else f"{suite}_{case_set}"
+def result_name(suite: str, case_set: str, variant: str = "") -> str:
+    name = suite if case_set == "main" else f"{suite}_{case_set}"
+    return f"{name}_{variant}" if variant else name
 
 
 def load_cases(case_set: str = "main") -> list[Case]:

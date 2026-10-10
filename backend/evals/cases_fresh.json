@@ -1,0 +1,30 @@
+[
+  {"id": "n01", "category": "close_analog", "expected_projects": ["001-logistics-fleet-portal"], "hours_range": [2400, 4000],
+   "brief": "We operate about 800 rental e-scooters across four cities. Operations staff need a screen showing where every scooter is, an alert when a scooter leaves its permitted zone or has not moved for days, and daily reports on battery levels and idle vehicles per city. Position and battery data come from one IoT hardware vendor."},
+  {"id": "n02", "category": "close_analog", "expected_projects": ["003-ecommerce-b2b-marketplace"], "hours_range": [3800, 6200],
+   "brief": "We want an online wholesale marketplace for restaurant suppliers. Suppliers upload price lists in Excel or send them through an API, restaurants order at the prices agreed with each supplier, pay by card on the platform, and the supplier receives the payment minus our fee. Suppliers manage their own stock and see incoming orders."},
+  {"id": "n03", "category": "close_analog", "expected_projects": ["006-saas-analytics-dashboard"], "hours_range": [3000, 5000],
+   "brief": "Marketing agencies that use our advertising platform want reporting inside it: dashboards they can arrange themselves showing impressions, clicks and spend per campaign, weekly PDF reports emailed to their clients, and strict separation so an agency only ever sees its own accounts. Millions of ad events arrive every hour."},
+  {"id": "n04", "category": "close_analog", "expected_projects": ["005-hr-internal-ai-assistant"], "hours_range": [1000, 1900],
+   "brief": "The admissions office of our university answers the same questions all day. We want a chat assistant for applicants that answers from about 600 policy documents and shows which document and section each answer comes from. Some documents are for staff only and must never be used to answer an applicant."},
+  {"id": "n05", "category": "close_analog", "expected_projects": ["002-fintech-kyc-onboarding"], "hours_range": [3800, 5800],
+   "brief": "Our peer-to-peer lending platform must onboard borrowers properly. They upload ID and proof of address, we verify identity with an external provider and screen against sanctions lists, and underwriters work through a queue of borderline applications. Every decision has to be traceable for auditors and personal data must be handled according to GDPR."},
+
+  {"id": "n06", "category": "partial_overlap", "expected_projects": ["004-healthcare-patient-app"], "hours_range": [2200, 3800],
+   "brief": "A chain of veterinary clinics wants pet owners to book appointments and get reminders by push and SMS, with a web panel for the clinic staff to manage their calendars. On top of that the clinics need electronic medical records for animals, a stock list of medicines and vaccines with low-stock warnings, and invoicing."},
+  {"id": "n07", "category": "partial_overlap", "expected_projects": ["008-mobile-field-service"], "hours_range": [2800, 4500],
+   "brief": "A construction company wants site managers to run safety inspections on a tablet, including on sites without any mobile coverage: checklists, photos of issues, a signature from the foreman, synced later. Head office also wants a safety incident register with approval workflow, and monthly statistics per site."},
+  {"id": "n08", "category": "partial_overlap", "expected_projects": ["007-edtech-lms"], "hours_range": [3200, 5200],
+   "brief": "We sell language courses to companies. Learners follow video lessons, take quizzes and receive a certificate when they finish, and HR managers see completion reports for their staff. The new part is speaking practice: learners record themselves and the system scores their pronunciation and gives feedback on each word."},
+  {"id": "n09", "category": "partial_overlap", "expected_projects": ["005-hr-internal-ai-assistant"], "hours_range": [1800, 3200],
+   "brief": "Our software company wants a support assistant that answers customer questions from our help-center articles and shows the articles it used. When it cannot answer, it should hand the conversation over to a human agent in our existing Zendesk, passing the whole chat. Support leads want a list of the questions it could not answer, to know which articles are missing."},
+
+  {"id": "n10", "category": "no_analog", "expected_projects": [], "hours_range": [1200, 2400],
+   "brief": "A start-up wants a mobile meal planning app. Users choose a diet, get a weekly menu from a recipe database, adjust portions, and the app builds a shopping list grouped by supermarket aisle. Nutritionists add and edit recipes in a simple web admin."},
+  {"id": "n11", "category": "no_analog", "expected_projects": [], "hours_range": [700, 1500],
+   "brief": "Our company needs an internal tool for leave requests. Employees request days off, their manager approves or rejects, the balance of remaining days is tracked, and approved leave appears in a shared team calendar. About 400 employees, sign-in with our company accounts."},
+  {"id": "n12", "category": "no_analog", "expected_projects": [], "hours_range": [1500, 3000],
+   "brief": "A podcast network wants its own hosting platform. Creators upload episodes, the platform generates and updates the RSS feeds that podcast apps read, and creators see download counts per episode and per country. Listeners can also stream from a simple embeddable web player."},
+  {"id": "n13", "category": "no_analog", "expected_projects": [], "hours_range": [900, 1800],
+   "brief": "Freelancers need a simple invoicing and bookkeeping app: create and send invoices as PDF, record expenses with receipt photos, track which invoices are paid, and export a summary for the tax advisor each quarter. Web app only, users sign up with email."}
+]

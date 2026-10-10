@@ -78,7 +78,7 @@ async def _selection_metrics(service: KnowledgeService, cases: list[Case], reran
     }
 
 
-async def run(case_set: str = "main") -> None:
+async def run(case_set: str = "main", variant: str = "") -> None:
     service = KnowledgeService()
     await service.ensure_indexed()
     cases = load_cases(case_set)
@@ -93,7 +93,7 @@ async def run(case_set: str = "main") -> None:
     sweep = [_threshold_metrics(cases, rankings, t) for t in THRESHOLDS]
 
     top_by_category = {
-        cat: mean(rankings[c.id][0][1] for c in cases if c.category == cat) for cat in CATEGORIES
+        cat: mean(rankings[c.id][0][1] for c in cases if c.category == cat) for cat in CATEGORIES if any(c.category == cat for c in cases)
     }
     misses = [
         (c.id, c.expected_projects, [(pid, round(s, 3)) for pid, s in rankings[c.id][:3]])

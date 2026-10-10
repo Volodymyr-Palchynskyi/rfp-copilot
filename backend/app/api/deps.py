@@ -11,14 +11,37 @@ from app.services.proposal_service import ProposalService
 
 
 @lru_cache()
-def get_knowledge_service() -> KnowledgeService:
+def _build_knowledge_service() -> KnowledgeService:
     """Singleton: embedded Qdrant (local mode) must be opened by a single client."""
     return KnowledgeService()
 
 
 @lru_cache()
-def get_proposal_service() -> ProposalService:
+def _build_proposal_service() -> ProposalService:
     return ProposalService(knowledge=get_knowledge_service())
+
+
+def _not_configured(exc: ValueError) -> HTTPException:
+    # Services raise ValueError for missing configuration (e.g. no API key). Say so plainly
+    # instead of leaking a bare 500; the cause is logged by the caller that needs it.
+    return HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="The service is not configured: " + str(exc),
+    )
+
+
+def get_knowledge_service() -> KnowledgeService:
+    try:
+        return _build_knowledge_service()
+    except ValueError as exc:
+        raise _not_configured(exc) from exc
+
+
+def get_proposal_service() -> ProposalService:
+    try:
+        return _build_proposal_service()
+    except ValueError as exc:
+        raise _not_configured(exc) from exc
 
 
 # ------------------------------------------------------------------ abuse protection

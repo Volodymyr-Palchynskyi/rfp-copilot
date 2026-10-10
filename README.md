@@ -1,5 +1,7 @@
 # RFP Proposal Copilot
 
+[![CI](https://github.com/Volodymyr-Palchynskyi/rfp-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/Volodymyr-Palchynskyi/rfp-copilot/actions/workflows/ci.yml)
+
 Turns a client brief into a structured technical proposal (architecture, tech stack, scope with hour estimates, risks), **grounded in the company's own past projects**. The UI streams the proposal section by section and shows exactly which past projects the estimate is based on.
 
 **Stack:** Angular 22 (signals, SSE over `fetch`) · FastAPI · Gemini (structured output + embeddings) · Qdrant · Docker Compose
@@ -71,13 +73,14 @@ Open <http://localhost:8081> (change with `FRONTEND_PORT`). The backend port is 
 ```bash
 cd backend && uv sync && uv run uvicorn app.main:app --reload   # http://localhost:8000/docs
 cd frontend && npm ci && npx ng serve                           # http://localhost:4200
+cd frontend && npx ng test --watch=false                        # 6 tests (SSE parser, app shell)
 ```
 
 **Tests and evals**
 
 ```bash
 cd backend
-uv run pytest                          # 28 tests: rate limits, concurrency, model fallback, reranking, auth
+uv run pytest                          # 51 tests: rate limits, concurrency, model fallback, reranking, auth, data integrity
 uv run python -m evals retrieval       # embeddings only, cheap
 uv run python -m evals generation      # 40 Gemini calls (RAG vs no RAG), a few minutes
 ```
@@ -103,6 +106,8 @@ Stop the API server before running evals locally: the embedded Qdrant store can 
 **Abuse protection for a public demo.** Per-IP sliding-window rate limit, a cap on concurrent generations (non-blocking: 503 instead of queueing), a 4,000-character brief limit, and an admin token on the index rebuild endpoint (disabled when no token is configured). nginx overwrites `X-Forwarded-For`, and the API port is not published, which is what makes the client IP the rate limiter sees trustworthy.
 
 **LLM reranker instead of a smarter threshold.** Similarity scores of relevant and irrelevant projects overlap, so no cut-off works. The reranker judges *reusable modules*, one call per request for all candidates (about 3.6 s extra, low thinking effort), with the reason shown in the UI so the user can overrule it. Trade-offs: extra latency and cost, and it is more lenient than my eval labels. It keeps a reference for most "nothing similar" briefs (abstention 25% on the tuned set, 0% on the held-out set) because a past marketplace really does contain reusable checkout and payment modules. End-to-end it helped on the tuned and held-out sets but not on the fresh one (see table). It also weakens the "abstain when nothing applies" behaviour, and several over-estimates trace back to weak analogies it accepted (ski rental 2,190 h against 700 to 1,500; podcast platform 3,565 h against 1,500 to 3,000). Treat it as unproven: a stricter rubric, or requiring both a similarity floor and the judge's agreement, are the next things to test on yet another fresh set.
+
+**CI runs everything that does not need an API key.** On every push: backend tests, frontend tests and production build, and a smoke test that boots the whole Docker stack with no key and checks the proxy, the admin guard and the 503 path. Evals are deliberately not in CI: they cost real quota and are slow. Offline tests also validate the hand-written data (every past project's scope hours must add up to its `total_hours`, eval sets must reference real projects). That check exists because it caught a real mistake of mine: one project said 3,400 hours in its metadata while its scope summed to 3,000, and the model had been shown both numbers. Earlier eval results used the inconsistent file; the effect is small (one of eight projects) but it means those numbers are not exactly reproducible.
 
 **Retrieval failure degrades, it does not fail.** If embeddings or the vector store are down, the proposal is still generated, without references, and the UI says so.
 

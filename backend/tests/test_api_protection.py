@@ -75,3 +75,19 @@ def test_ingest_rejects_wrong_token(client, monkeypatch):
     monkeypatch.setattr(settings, "ADMIN_TOKEN", "secret")
     assert client.post("/api/v1/knowledge/ingest").status_code == 401
     assert client.post("/api/v1/knowledge/ingest", headers={"X-Admin-Token": "nope"}).status_code == 401
+
+
+def test_missing_api_key_gives_503_not_a_bare_500(monkeypatch):
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
+    deps._build_knowledge_service.cache_clear()
+    deps._build_proposal_service.cache_clear()
+    monkeypatch.setattr(deps, "_search_limiter", SlidingWindowLimiter(5, 600))
+    monkeypatch.setattr(deps, "_generation_limiter", SlidingWindowLimiter(5, 600))
+
+    client = TestClient(app)
+    search = client.get("/api/v1/knowledge/search", params={"q": "fleet tracking"})
+    generate = client.post("/api/v1/proposals/stream", json=PAYLOAD)
+
+    assert search.status_code == 503 and "not configured" in search.json()["detail"]
+    assert generate.status_code == 503
+    assert deps._generation_gate.active == 0  # a failed request must not leak a slot

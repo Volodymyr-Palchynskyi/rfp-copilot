@@ -1,7 +1,11 @@
 services:
   backend:
     build: ./backend
-    env_file: ./backend/.env # GEMINI_API_KEY, ADMIN_TOKEN, ... (never baked into the image)
+    env_file:
+      # GEMINI_API_KEY, ADMIN_TOKEN, ... (never baked into the image). Optional so CI and fresh
+      # clones can build and boot the stack; without a key the API answers 503 where it needs one.
+      - path: ./backend/.env
+        required: false
     environment:
       # Same-origin through nginx, so CORS is not needed in this setup.
       CORS_ORIGINS: '["http://localhost:${FRONTEND_PORT:-8081}"]'

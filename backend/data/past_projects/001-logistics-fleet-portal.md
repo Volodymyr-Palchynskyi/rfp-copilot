@@ -5,7 +5,7 @@ industry: logistics
 stack: Angular, NestJS, PostgreSQL, Redis, AWS ECS
 team_size: 5
 duration_weeks: 20
-total_hours: 3400
+total_hours: 3000
 ---
 
 ## Overview

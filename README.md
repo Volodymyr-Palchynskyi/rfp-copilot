@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Volodymyr-Palchynskyi/rfp-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/Volodymyr-Palchynskyi/rfp-copilot/actions/workflows/ci.yml)
 
-Turns a client brief into a structured technical proposal (architecture, tech stack, scope with hour estimates, risks), **grounded in the company's own past projects**. The UI streams the proposal section by section and shows exactly which past projects the estimate is based on.
+Turns a client brief into a structured technical proposal (architecture, tech stack, scope with hour estimates, risks), **grounded in the company's own past projects**. The UI streams the proposal section by section, shows exactly which past projects the estimate is based on (with the reranker's reason for each), and exports the finished proposal as Markdown.
 
 **Stack:** Angular 22 (signals, SSE over `fetch`) · FastAPI · Gemini (structured output + embeddings) · Qdrant · Docker Compose
 
@@ -73,7 +73,7 @@ Open <http://localhost:8081> (change with `FRONTEND_PORT`). The backend port is 
 ```bash
 cd backend && uv sync && uv run uvicorn app.main:app --reload   # http://localhost:8000/docs
 cd frontend && npm ci && npx ng serve                           # http://localhost:4200
-cd frontend && npx ng test --watch=false                        # 6 tests (SSE parser, app shell)
+cd frontend && npx ng test --watch=false                        # 14 tests (SSE parser, Markdown export, app shell)
 ```
 
 **Tests and evals**
@@ -118,7 +118,7 @@ Stop the API server before running evals locally: the embedded Qdrant store can 
 - **The eval sets are small and self-authored.** 20 tuned briefs, 15 held-out ones (no longer pristine, I used its failures to design the reranker) and 13 fresh ones. Each set is small enough that one brief moves a percentage by 5 to 10 points. Expected hour ranges are my judgement, not real project outcomes. One run per brief at temperature 0.2, so differences of a few points are noise.
 - **Rate limits are in memory.** Fine for one process. With several instances they need to move to Redis.
 - **Latency.** Reranking adds about 3.6 s before generation starts, and the first proposal token then takes 10 to 20 seconds because the model spends about as many thinking tokens as output tokens. A lower thinking budget would cut it, at an unmeasured quality cost.
-- **Not built:** auth and multi-tenancy, persistence of generated proposals, PDF/Markdown export, the agent-with-human-approval phase.
+- **Not built:** auth and multi-tenancy, persistence of generated proposals, PDF export, the agent-with-human-approval phase.
 
 ## Project layout
 

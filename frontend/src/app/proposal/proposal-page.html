@@ -133,6 +133,16 @@
             </div>
           </header>
 
+          @if (final()) {
+            <div class="export" role="group" aria-label="Export">
+              <button type="button" class="secondary small" (click)="copyMarkdown()">Copy as Markdown</button>
+              <button type="button" class="secondary small" (click)="downloadMarkdown()">Download .md</button>
+              @if (exportNote(); as note) {
+                <span class="muted" role="status">{{ note }}</span>
+              }
+            </div>
+          }
+
           @if (draft().executive_summary; as summary) {
             <h3>Executive summary</h3>
             <p class="prose">{{ summary }}</p>

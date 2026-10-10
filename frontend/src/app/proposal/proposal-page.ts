@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { markdownFileName, toMarkdown } from './markdown';
 import { ProposalStreamService } from './proposal-stream.service';
 import { Budget, PartialDraft, ProposalResponse, ReferenceProject } from './proposal.models';
 
@@ -63,6 +64,7 @@ export class ProposalPage {
   protected readonly references = signal<ReferenceProject[]>([]);
   protected readonly draft = signal<PartialDraft>({});
   protected readonly final = signal<ProposalResponse | null>(null);
+  protected readonly exportNote = signal<string | null>(null);
 
   protected readonly running = computed(() => this.status() === 'running');
   protected readonly canSubmit = computed(
@@ -100,6 +102,7 @@ export class ProposalPage {
     this.final.set(null);
     this.error.set(null);
     this.fallbackModel.set(null);
+    this.exportNote.set(null);
     this.status.set('running');
 
     const abort = new AbortController();
@@ -147,6 +150,42 @@ export class ProposalPage {
     } finally {
       if (this.abort === abort) this.abort = null;
     }
+  }
+
+  /** Only a completed proposal can be exported: partial drafts have unvalidated, half-written fields. */
+  private markdown(): string | null {
+    const proposal = this.final();
+    return proposal ? toMarkdown(proposal, new Date().toISOString().slice(0, 10)) : null;
+  }
+
+  protected async copyMarkdown(): Promise<void> {
+    const text = this.markdown();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      this.flashNote('Copied to clipboard');
+    } catch {
+      // Clipboard needs a secure context and a user gesture; downloading always works.
+      this.flashNote('Copy is blocked by the browser, use Download instead');
+    }
+  }
+
+  protected downloadMarkdown(): void {
+    const text = this.markdown();
+    const proposal = this.final();
+    if (!text || !proposal) return;
+
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = markdownFileName(proposal.project_title);
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private flashNote(message: string): void {
+    this.exportNote.set(message);
+    setTimeout(() => this.exportNote.set(null), 2500);
   }
 
   protected cancel(): void {

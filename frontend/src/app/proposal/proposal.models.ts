@@ -37,6 +37,7 @@ export interface ReferenceProject {
   duration_weeks: number;
   relevance_score: number;
   matched_sections: string[];
+  reason?: string | null;
 }
 
 export interface ProposalDraft {

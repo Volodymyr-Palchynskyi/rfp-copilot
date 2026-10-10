@@ -22,8 +22,15 @@ class Case:
         return sum(self.hours_range) / 2
 
 
-def load_cases() -> list[Case]:
-    raw = json.loads((EVALS_DIR / "cases.json").read_text(encoding="utf-8"))
+CASE_FILES = {"main": "cases.json", "heldout": "cases_heldout.json"}
+
+
+def result_name(suite: str, case_set: str) -> str:
+    return suite if case_set == "main" else f"{suite}_{case_set}"
+
+
+def load_cases(case_set: str = "main") -> list[Case]:
+    raw = json.loads((EVALS_DIR / CASE_FILES[case_set]).read_text(encoding="utf-8"))
     return [
         Case(
             id=c["id"],

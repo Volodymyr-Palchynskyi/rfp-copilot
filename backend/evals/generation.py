@@ -16,7 +16,7 @@ from app.schemas.proposal import ProposalRequest, ProposalResponse
 from app.services.knowledge_service import KnowledgeService
 from app.services.proposal_service import ProposalService
 from pathlib import Path
-from evals.common import CATEGORIES, Case, load_cases, md_table, pct, save_report
+from evals.common import CATEGORIES, Case, load_cases, md_table, pct, result_name, save_report
 
 CONCURRENCY = 3
 RETRIES = 2
@@ -61,8 +61,8 @@ def _score(case: Case, response: ProposalResponse, names: dict[str, str]) -> dic
     }
 
 
-async def run() -> None:
-    cases = load_cases()
+async def run(case_set: str = "main") -> None:
+    cases = load_cases(case_set)
     names = _corpus_names()
 
     knowledge = KnowledgeService()
@@ -110,7 +110,8 @@ async def run() -> None:
     for cat in CATEGORIES:
         table_rows += [row_for(cat, m, cat) for m in services]
 
-    md = f"# Generation eval\n\nModel: `{settings.GEMINI_MODEL}`, temperature 0.2, single run per brief, {len(cases)} briefs.\n\n"
+    title = "Generation eval" + ("" if case_set == "main" else f" ({case_set} set)")
+    md = f"# {title}\n\nModel: `{settings.GEMINI_MODEL}`, temperature 0.2, single run per brief, {len(cases)} briefs.\n\n"
     md += "- in range: midpoint of total hours falls inside the expected range\n"
     md += "- median error: |midpoint - expected midpoint| / expected midpoint\n"
     md += "- cites refs: estimation_basis names at least one provided reference project\n"
@@ -131,4 +132,4 @@ async def run() -> None:
         md += f"\n\n## Failures ({len(failed)})\n\n" + "\n".join(f"- {r['case']} / {r['mode']}: {r['error']}" for r in failed)
 
     print(md)
-    save_report("generation", md, {"model": settings.GEMINI_MODEL, "rows": rows})
+    save_report(result_name("generation", case_set), md, {"model": settings.GEMINI_MODEL, "rows": rows})

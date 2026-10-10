@@ -236,6 +236,7 @@ GUIDELINES:
                 duration_weeks=r.duration_weeks,
                 relevance_score=round(r.score, 4),
                 matched_sections=[section for section, _ in r.chunks],
+                reason=r.reason,
             )
             for r in references
         ]

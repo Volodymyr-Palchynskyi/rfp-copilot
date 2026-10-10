@@ -43,6 +43,13 @@ class Settings(BaseSettings):
     QDRANT_URL: str = ""  # set to use a real Qdrant server instead of QDRANT_PATH
     QDRANT_COLLECTION: str = "past_projects"
     RAG_TOP_K: int = 8
+    # Reranking: vector search proposes candidates above a low floor, an LLM judge decides.
+    RERANK_ENABLED: bool = True
+    RERANK_MODEL: str = ""  # empty = same model as GEMINI_MODEL
+    RERANK_TIMEOUT_S: int = 30
+    RERANK_MIN_RELEVANCE: int = 2  # judge scale 0-3, keep projects scoring at least this
+    RAG_CANDIDATE_MIN_SCORE: float = 0.60
+    RAG_MAX_CANDIDATES: int = 5
     RAG_MIN_SCORE: float = 0.70  # chosen by the retrieval eval threshold sweep (evals/results/retrieval.md)
 
     # CORS configuration (list of allowed frontend origins)

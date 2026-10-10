@@ -66,6 +66,7 @@ class ReferenceProject(BaseModel):
     duration_weeks: int
     relevance_score: float = Field(description="Best cosine similarity among matched chunks")
     matched_sections: list[str]
+    reason: str | None = Field(default=None, description="Why the reranker considers this project a useful analogy")
 
 
 # ==============================================================================

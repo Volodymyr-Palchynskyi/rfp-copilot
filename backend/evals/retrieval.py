@@ -4,10 +4,13 @@ relevance threshold separates real analogies from noise?
 
 Only embedding calls are needed (no generation), so it is cheap enough to run on every change.
 """
+import asyncio
+import time
 from statistics import mean
 
 from app.services.knowledge_service import MAX_REFERENCE_PROJECTS, KnowledgeService
-from evals.common import CATEGORIES, Case, load_cases, md_table, pct, save_report
+from app.core.config import settings
+from evals.common import CATEGORIES, Case, load_cases, md_table, pct, result_name, save_report
 
 THRESHOLDS = [0.50, 0.55, 0.60, 0.65, 0.70, 0.75]
 
@@ -51,14 +54,42 @@ def _threshold_metrics(cases: list[Case], rankings: dict[str, list[tuple[str, fl
     }
 
 
-async def run() -> None:
+async def _selection_metrics(service: KnowledgeService, cases: list[Case], rerank: bool) -> dict:
+    """End-to-end reference selection as the pipeline does it, with or without the LLM reranker."""
+    semaphore = asyncio.Semaphore(4)
+
+    async def one(case: Case) -> tuple[Case, list[str], float]:
+        async with semaphore:
+            start = time.perf_counter()
+            refs = await service.find_references(case.brief, rerank=rerank)
+            return case, [r.project_id for r in refs], time.perf_counter() - start
+
+    results = await asyncio.gather(*(one(c) for c in cases))
+    positives = [(c, kept) for c, kept, _ in results if c.expected_projects]
+    negatives = [(c, kept) for c, kept, _ in results if not c.expected_projects]
+    relevant_kept = sum(pid in c.expected_projects for c, kept in positives for pid in kept)
+    total_kept = sum(len(kept) for _, kept in positives)
+    return {
+        "recall": sum(any(pid in c.expected_projects for pid in kept) for c, kept in positives) / len(positives),
+        "precision": relevant_kept / total_kept if total_kept else 0.0,
+        "abstention": sum(not kept for _, kept in negatives) / len(negatives),
+        "mean_latency_s": mean(t for _, _, t in results),
+        "kept": {c.id: kept for c, kept, _ in results},
+    }
+
+
+async def run(case_set: str = "main") -> None:
     service = KnowledgeService()
     await service.ensure_indexed()
-    cases = load_cases()
+    cases = load_cases(case_set)
 
     rankings = {c.id: await service.rank_projects(c.brief) for c in cases}
 
     rank = _rank_metrics(cases, rankings)
+    selection = {
+        "threshold": await _selection_metrics(service, cases, rerank=False),
+        "rerank": await _selection_metrics(service, cases, rerank=True),
+    }
     sweep = [_threshold_metrics(cases, rankings, t) for t in THRESHOLDS]
 
     top_by_category = {
@@ -70,7 +101,17 @@ async def run() -> None:
         if c.expected_projects and not any(pid in c.expected_projects for pid, _ in rankings[c.id][:3])
     ]
 
-    md = "# Retrieval eval\n\n"
+    md = "# Retrieval eval" + ("" if case_set == "main" else f" ({case_set} set)") + "\n\n"
+    if case_set != "main":
+        md += (
+            f"Held-out: the threshold in use ({settings.RAG_MIN_SCORE:.2f}) was chosen on the main set and "
+            "is **not** re-tuned here. The sweep below is informational.\n\n"
+        )
+    in_use = _threshold_metrics(cases, rankings, settings.RAG_MIN_SCORE)
+    md += (
+        f"At the configured threshold {settings.RAG_MIN_SCORE:.2f}: recall {pct(in_use['recall'])}, "
+        f"precision {pct(in_use['precision'])}, abstention {pct(in_use['abstention'])}.\n\n"
+    )
     md += f"{len(cases)} briefs ({rank['cases']} with a relevant project, {len(cases) - rank['cases']} out of domain).\n\n"
     md += "## Ranking quality (projects ranked by best chunk score)\n\n"
     md += md_table(
@@ -87,9 +128,31 @@ async def run() -> None:
         ["threshold", "recall", "precision", "abstention"],
         [[f"{m['threshold']:.2f}", pct(m["recall"]), pct(m["precision"]), pct(m["abstention"])] for m in sweep],
     )
+    md += "\n\n## Reference selection: similarity threshold vs LLM reranker\n\n"
+    md += (
+        f"Threshold = cosine >= {settings.RAG_MIN_SCORE:.2f}. Rerank = candidates >= {settings.RAG_CANDIDATE_MIN_SCORE:.2f}, "
+        f"kept if the judge scores them >= {settings.RERANK_MIN_RELEVANCE} of 3.\n\n"
+    )
+    md += md_table(
+        ["mode", "recall", "precision", "abstention", "mean time"],
+        [
+            [name, pct(m["recall"]), pct(m["precision"]), pct(m["abstention"]), f"{m['mean_latency_s']:.1f}s"]
+            for name, m in selection.items()
+        ],
+    )
+    wrong = [
+        (c.id, c.category, kept)
+        for c in cases
+        for kept in [selection["rerank"]["kept"][c.id]]
+        if (c.expected_projects and not any(pid in c.expected_projects for pid in kept))
+        or (not c.expected_projects and kept)
+        or any(pid not in c.expected_projects for pid in kept) and c.expected_projects
+    ]
+    if wrong:
+        md += "\n\nReranker mistakes (id, category, kept): " + "; ".join(f"{i} {cat} {k}" for i, cat, k in wrong)
     if misses:
         md += "\n\n## Misses (no relevant project in top 3)\n\n"
         md += md_table(["case", "expected", "got"], [[i, ", ".join(e), g] for i, e, g in misses])
 
     print(md)
-    save_report("retrieval", md, {"rank": rank, "sweep": sweep, "top_by_category": top_by_category})
+    save_report(result_name("retrieval", case_set), md, {"rank": rank, "sweep": sweep, "selection": selection, "top_by_category": top_by_category})

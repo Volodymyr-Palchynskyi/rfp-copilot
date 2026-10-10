@@ -1,0 +1,152 @@
+{
+  "rank": {
+    "cases": 11,
+    "hit@1": 1.0,
+    "hit@3": 1.0,
+    "mrr": 1.0
+  },
+  "sweep": [
+    {
+      "threshold": 0.5,
+      "recall": 1.0,
+      "precision": 0.3939393939393939,
+      "abstention": 0.0
+    },
+    {
+      "threshold": 0.55,
+      "recall": 1.0,
+      "precision": 0.3939393939393939,
+      "abstention": 0.0
+    },
+    {
+      "threshold": 0.6,
+      "recall": 1.0,
+      "precision": 0.3939393939393939,
+      "abstention": 0.0
+    },
+    {
+      "threshold": 0.65,
+      "recall": 1.0,
+      "precision": 0.6842105263157895,
+      "abstention": 0.25
+    },
+    {
+      "threshold": 0.7,
+      "recall": 0.8181818181818182,
+      "precision": 1.0,
+      "abstention": 1.0
+    },
+    {
+      "threshold": 0.75,
+      "recall": 0.18181818181818182,
+      "precision": 1.0,
+      "abstention": 1.0
+    }
+  ],
+  "selection": {
+    "threshold": {
+      "recall": 0.8181818181818182,
+      "precision": 1.0,
+      "abstention": 1.0,
+      "mean_latency_s": 0.32102949333323827,
+      "kept": {
+        "h01": [
+          "001-logistics-fleet-portal"
+        ],
+        "h02": [
+          "002-fintech-kyc-onboarding"
+        ],
+        "h03": [
+          "003-ecommerce-b2b-marketplace"
+        ],
+        "h04": [
+          "004-healthcare-patient-app"
+        ],
+        "h05": [
+          "005-hr-internal-ai-assistant"
+        ],
+        "h06": [
+          "006-saas-analytics-dashboard"
+        ],
+        "h07": [
+          "008-mobile-field-service"
+        ],
+        "h08": [
+          "007-edtech-lms"
+        ],
+        "h09": [
+          "005-hr-internal-ai-assistant"
+        ],
+        "h10": [],
+        "h11": [],
+        "h12": [],
+        "h13": [],
+        "h14": [],
+        "h15": []
+      }
+    },
+    "rerank": {
+      "recall": 1.0,
+      "precision": 0.9285714285714286,
+      "abstention": 0.0,
+      "mean_latency_s": 3.67957379999998,
+      "kept": {
+        "h01": [
+          "001-logistics-fleet-portal"
+        ],
+        "h02": [
+          "002-fintech-kyc-onboarding"
+        ],
+        "h03": [
+          "003-ecommerce-b2b-marketplace"
+        ],
+        "h04": [
+          "004-healthcare-patient-app"
+        ],
+        "h05": [
+          "005-hr-internal-ai-assistant"
+        ],
+        "h06": [
+          "006-saas-analytics-dashboard"
+        ],
+        "h07": [
+          "008-mobile-field-service"
+        ],
+        "h08": [
+          "007-edtech-lms",
+          "002-fintech-kyc-onboarding"
+        ],
+        "h09": [
+          "005-hr-internal-ai-assistant"
+        ],
+        "h10": [
+          "001-logistics-fleet-portal",
+          "003-ecommerce-b2b-marketplace"
+        ],
+        "h11": [
+          "006-saas-analytics-dashboard",
+          "003-ecommerce-b2b-marketplace"
+        ],
+        "h12": [
+          "004-healthcare-patient-app"
+        ],
+        "h13": [
+          "003-ecommerce-b2b-marketplace",
+          "004-healthcare-patient-app"
+        ],
+        "h14": [
+          "005-hr-internal-ai-assistant",
+          "003-ecommerce-b2b-marketplace"
+        ],
+        "h15": [
+          "007-edtech-lms"
+        ]
+      }
+    }
+  },
+  "top_by_category": {
+    "close_analog": 0.7385358931681307,
+    "partial_overlap": 0.7151621768209179,
+    "out_of_domain": 0.6657759358172501
+  }
+}

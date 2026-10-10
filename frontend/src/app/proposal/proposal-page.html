@@ -95,6 +95,9 @@
                 <div class="bar" [attr.aria-label]="'Relevance ' + (ref.relevance_score * 100 | number: '1.0-0') + '%'">
                   <span [style.width.%]="ref.relevance_score * 100"></span>
                 </div>
+                @if (ref.reason) {
+                  <p class="why">{{ ref.reason }}</p>
+                }
                 <small class="muted">
                   {{ ref.industry }} · {{ ref.stack }} · matched: {{ ref.matched_sections.join(', ') }}
                 </small>

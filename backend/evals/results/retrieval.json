@@ -43,6 +43,137 @@
       "abstention": 1.0
     }
   ],
+  "selection": {
+    "threshold": {
+      "recall": 1.0,
+      "precision": 1.0,
+      "abstention": 1.0,
+      "mean_latency_s": 0.2991221399999858,
+      "kept": {
+        "c01": [
+          "001-logistics-fleet-portal"
+        ],
+        "c02": [
+          "002-fintech-kyc-onboarding"
+        ],
+        "c03": [
+          "003-ecommerce-b2b-marketplace"
+        ],
+        "c04": [
+          "004-healthcare-patient-app"
+        ],
+        "c05": [
+          "005-hr-internal-ai-assistant"
+        ],
+        "c06": [
+          "006-saas-analytics-dashboard"
+        ],
+        "c07": [
+          "007-edtech-lms"
+        ],
+        "c08": [
+          "008-mobile-field-service"
+        ],
+        "c09": [
+          "002-fintech-kyc-onboarding"
+        ],
+        "c10": [
+          "003-ecommerce-b2b-marketplace"
+        ],
+        "c11": [
+          "008-mobile-field-service"
+        ],
+        "c12": [
+          "007-edtech-lms"
+        ],
+        "c13": [
+          "005-hr-internal-ai-assistant"
+        ],
+        "c14": [
+          "004-healthcare-patient-app"
+        ],
+        "c15": [
+          "002-fintech-kyc-onboarding"
+        ],
+        "c16": [
+          "008-mobile-field-service"
+        ],
+        "c17": [],
+        "c18": [],
+        "c19": [],
+        "c20": []
+      }
+    },
+    "rerank": {
+      "recall": 1.0,
+      "precision": 1.0,
+      "abstention": 0.25,
+      "mean_latency_s": 3.6128832149999655,
+      "kept": {
+        "c01": [
+          "001-logistics-fleet-portal"
+        ],
+        "c02": [
+          "002-fintech-kyc-onboarding"
+        ],
+        "c03": [
+          "003-ecommerce-b2b-marketplace"
+        ],
+        "c04": [
+          "004-healthcare-patient-app"
+        ],
+        "c05": [
+          "005-hr-internal-ai-assistant"
+        ],
+        "c06": [
+          "006-saas-analytics-dashboard"
+        ],
+        "c07": [
+          "007-edtech-lms"
+        ],
+        "c08": [
+          "008-mobile-field-service"
+        ],
+        "c09": [
+          "002-fintech-kyc-onboarding"
+        ],
+        "c10": [
+          "003-ecommerce-b2b-marketplace"
+        ],
+        "c11": [
+          "008-mobile-field-service",
+          "001-logistics-fleet-portal"
+        ],
+        "c12": [
+          "007-edtech-lms",
+          "005-hr-internal-ai-assistant"
+        ],
+        "c13": [
+          "005-hr-internal-ai-assistant"
+        ],
+        "c14": [
+          "004-healthcare-patient-app"
+        ],
+        "c15": [
+          "002-fintech-kyc-onboarding",
+          "006-saas-analytics-dashboard"
+        ],
+        "c16": [
+          "008-mobile-field-service"
+        ],
+        "c17": [],
+        "c18": [
+          "004-healthcare-patient-app"
+        ],
+        "c19": [
+          "006-saas-analytics-dashboard"
+        ],
+        "c20": [
+          "003-ecommerce-b2b-marketplace"
+        ]
+      }
+    }
+  },
   "top_by_category": {
     "close_analog": 0.774032815618,
     "partial_overlap": 0.729715038936927,

@@ -22,7 +22,7 @@ class Case:
         return sum(self.hours_range) / 2
 
 
-CASE_FILES = {"main": "cases.json", "heldout": "cases_heldout.json", "fresh": "cases_fresh.json"}
+CASE_FILES = {"main": "cases.json", "heldout": "cases_heldout.json", "fresh": "cases_fresh.json", "fresh2": "cases_fresh2.json"}
 
 
 def result_name(suite: str, case_set: str, variant: str = "") -> str:

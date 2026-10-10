@@ -1,0 +1,32 @@
+[
+  {"id": "f01", "category": "close_analog", "expected_projects": ["004-healthcare-patient-app"], "hours_range": [2600, 4200],
+   "brief": "A mental health start-up wants clients to book sessions with counsellors, join them over video, and receive reminders before each session. Counsellors work from a web panel with their calendar and a secure message thread per client. Sensitive health information must be protected, and the app has to be published in both app stores."},
+  {"id": "f02", "category": "close_analog", "expected_projects": ["007-edtech-lms"], "hours_range": [2000, 3300],
+   "brief": "A manufacturer needs a training system for factory staff: short video courses, tests with a limited number of attempts, a certificate once a course is passed, and reports for shift supervisors on who is certified. Some of the courses come from suppliers as SCORM packages and must be importable."},
+  {"id": "f03", "category": "close_analog", "expected_projects": ["008-mobile-field-service"], "hours_range": [2600, 4200],
+   "brief": "A pest control company wants its technicians to use a phone app that works in cellars and warehouses with no signal: today's jobs, a checklist per visit, photos as evidence, the customer's signature, and automatic upload later. Jobs and invoices must sync with our ERP, and the office needs a scheduling screen."},
+  {"id": "f04", "category": "close_analog", "expected_projects": ["001-logistics-fleet-portal"], "hours_range": [2400, 4000],
+   "brief": "A school bus operator wants to see where its 250 buses are during the morning and afternoon runs, get an alert when a bus leaves its route or stays too long at one place, manage its drivers, and receive a daily report per route. Position data comes from the tracking devices of two different suppliers."},
+
+  {"id": "g01", "category": "partial_overlap", "expected_projects": ["003-ecommerce-b2b-marketplace"], "hours_range": [4200, 6800],
+   "brief": "We want an online auction platform for classic cars. Dealers list vehicles from their own inventory files, buyers search by make, year and condition and follow listings they like. The new part is live bidding: auctions run in real time with a countdown and automatic extension on late bids. Winners pay a deposit online and the dealer is paid out minus our commission."},
+  {"id": "g02", "category": "partial_overlap", "expected_projects": ["002-fintech-kyc-onboarding"], "hours_range": [3200, 5200],
+   "brief": "Our gig-work platform lets companies fill short shifts with freelance workers. Before a worker can accept shifts we verify their identity with an external provider, check their right to work and run a background check, and our compliance team reviews doubtful cases. Beyond that we need the shift marketplace itself, where workers browse and pick shifts, and weekly payouts to workers."},
+  {"id": "g03", "category": "partial_overlap", "expected_projects": ["006-saas-analytics-dashboard"], "hours_range": [3200, 5200],
+   "brief": "We install sensors in office buildings to measure energy use. Readings stream in constantly. Building owners should get dashboards they can customise and a monthly report by email, each owner seeing only their own buildings. In addition we need alert rules that notify an owner when consumption crosses a limit, and a portal where our installers register and configure new sensors."},
+  {"id": "g04", "category": "partial_overlap", "expected_projects": ["005-hr-internal-ai-assistant"], "hours_range": [2000, 3600],
+   "brief": "Sales representatives at a pharmaceutical company visit doctors and need fast answers about our products. We want a mobile app where they ask a question and get an answer from the approved product documents, with the source document and page shown. The app also has to log each visit to our Salesforce CRM, and the documents must be readable offline in hospital basements."},
+  {"id": "g05", "category": "partial_overlap", "expected_projects": ["004-healthcare-patient-app"], "hours_range": [3000, 5000],
+   "brief": "A corporate wellness provider wants an app where employees book one-to-one coaching sessions, join them by video and get reminders. The app should also run company-wide step challenges using data from Apple Health and Google Fit, with leaderboards, and give each company's HR admin a report on participation."},
+
+  {"id": "q01", "category": "no_analog", "expected_projects": [], "hours_range": [1800, 3200],
+   "brief": "A distributor wants a web app for stock counting in its warehouse. Staff scan barcodes with handheld scanners, enter counted quantities per shelf, and the system lists discrepancies against the inventory system and proposes purchase orders for items running low. No maps or vehicle tracking involved."},
+  {"id": "q02", "category": "no_analog", "expected_projects": [], "hours_range": [1000, 2200],
+   "brief": "A start-up wants a personal budgeting mobile app. Users enter income and expenses by hand, assign categories, set monthly limits and savings goals, and see simple charts of where their money goes. No bank connection and no payments; data stays on the user's account."},
+  {"id": "q03", "category": "no_analog", "expected_projects": [], "hours_range": [700, 1400],
+   "brief": "A medical practice with 30 staff wants a small web tool to plan shift rotas: managers define shifts and required headcount, staff mark availability and request swaps, and the tool proposes a rota and warns about rule violations such as too many consecutive nights. Nothing patient-related is stored."},
+  {"id": "q04", "category": "no_analog", "expected_projects": [], "hours_range": [1200, 2400],
+   "brief": "A company wants an employee recognition web app: colleagues send each other kudos with a short message, kudos earn points, and points can be exchanged for rewards from a catalogue, fulfilled through a gift card provider's API. Managers see a simple participation overview."},
+  {"id": "q05", "category": "no_analog", "expected_projects": [], "hours_range": [3000, 5500],
+   "brief": "A start-up wants a collaborative whiteboard for classrooms that runs in the browser. Teachers open a session, students join with a code and draw or write at the same time with low delay, teachers can lock the board, hand out pens to individual students and save the board as an image or PDF afterwards."}
+]

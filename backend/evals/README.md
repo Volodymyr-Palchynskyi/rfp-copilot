@@ -57,3 +57,11 @@ same industry in common).
 
 Archived threshold-only reports for the earlier sets: `results/generation_v2_threshold.*`,
 `results/generation_heldout_threshold.*`.
+
+## Reserved set: `fresh2`
+
+`cases_fresh2.json` (14 briefs: 4 close, 5 partial, 5 no analog, same strict category definitions as `fresh`) was
+written on 2026-10-10 **before any run**, with its expected hour ranges fixed in advance. It is reserved for the
+next planned experiment: a combined selection rule (similarity floor AND reranker agreement) against the current
+rerank-only and threshold-only rules. Do not run it to explore or to tune; run each candidate configuration on it once
+and report all of them. After that it is spent like the other sets.

@@ -9,7 +9,7 @@ from evals import generation, retrieval
 def main() -> None:
     parser = argparse.ArgumentParser(prog="python -m evals")
     parser.add_argument("suite", choices=["retrieval", "generation"])
-    parser.add_argument("--set", dest="case_set", choices=["main", "heldout", "fresh"], default="main")
+    parser.add_argument("--set", dest="case_set", choices=["main", "heldout", "fresh", "fresh2"], default="main")
     parser.add_argument("--no-rerank", action="store_true", help="select references by similarity threshold only")
     args = parser.parse_args()
     if args.no_rerank:

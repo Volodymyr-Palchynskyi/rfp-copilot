@@ -1,0 +1,24 @@
+services:
+  backend:
+    build: ./backend
+    env_file: ./backend/.env # GEMINI_API_KEY, ADMIN_TOKEN, ... (never baked into the image)
+    environment:
+      # Same-origin through nginx, so CORS is not needed in this setup.
+      CORS_ORIGINS: '["http://localhost:${FRONTEND_PORT:-8081}"]'
+    volumes:
+      - qdrant-data:/app/.qdrant
+    # Deliberately no `ports`: only nginx can reach the API, which makes the forwarded
+    # client IP (used by the rate limiter) trustworthy.
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "${FRONTEND_PORT:-8081}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  qdrant-data:

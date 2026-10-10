@@ -20,6 +20,20 @@ class Settings(BaseSettings):
     # Gemini AI configuration
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-3.7-flash"
+    # Used when the primary model is rate limited, overloaded or times out. Empty disables fallback.
+    GEMINI_FALLBACK_MODEL: str = ""
+    GEMINI_TIMEOUT_S: int = 90
+    # USD per 1M tokens, used for cost estimates. 0 disables (prices change, set them in .env).
+    PRICE_INPUT_PER_MTOK: float = 0.0
+    PRICE_OUTPUT_PER_MTOK: float = 0.0
+
+    # Abuse protection for the public demo
+    MAX_BRIEF_CHARS: int = 4000
+    RATE_LIMIT_GENERATIONS: int = 5  # generations per client per window
+    RATE_LIMIT_SEARCHES: int = 30  # knowledge searches per client per window
+    RATE_LIMIT_WINDOW_S: int = 600
+    MAX_CONCURRENT_GENERATIONS: int = 3
+    ADMIN_TOKEN: str = ""  # protects POST /knowledge/ingest; empty disables the endpoint
 
     # RAG configuration
     EMBEDDING_MODEL: str = "gemini-embedding-001"

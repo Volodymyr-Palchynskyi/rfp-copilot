@@ -1,19 +1,28 @@
 import logging
+import time
 from collections.abc import AsyncIterator
 from typing import Any
 
+import httpx
 from google import genai
-from google.genai import types
+from google.genai import errors, types
 from pydantic_core import from_json
 
 from app.core.config import settings
-from app.schemas.proposal import ProposalDraft, ProposalRequest, ProposalResponse, ReferenceProject
+from app.schemas.proposal import ProposalDraft, ProposalRequest, ProposalResponse, ReferenceProject, Usage
 from app.services.knowledge_service import KnowledgeService, ReferenceContext
 
 logger = logging.getLogger(__name__)
 
 # A streamed event: {"event": "references" | "section" | "complete", "data": <json-serialisable>}
 StreamEvent = dict[str, Any]
+
+
+def is_retryable(exc: Exception) -> bool:
+    """Failures where another model may well succeed: rate limits, overload, outages, timeouts."""
+    if isinstance(exc, errors.APIError):
+        return exc.code == 429 or exc.code >= 500
+    return isinstance(exc, httpx.TransportError)
 
 
 class ProposalService:
@@ -23,7 +32,13 @@ class ProposalService:
             raise ValueError("GEMINI_API_KEY is not configured in settings or .env file.")
 
         self.model_name = settings.GEMINI_MODEL
-        self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        self.models = [self.model_name]
+        if settings.GEMINI_FALLBACK_MODEL and settings.GEMINI_FALLBACK_MODEL != self.model_name:
+            self.models.append(settings.GEMINI_FALLBACK_MODEL)
+        self.client = genai.Client(
+            api_key=settings.GEMINI_API_KEY,
+            http_options=types.HttpOptions(timeout=settings.GEMINI_TIMEOUT_S * 1000),
+        )
 
         self.system_instruction = (
             "You are a Principal Enterprise Solutions Architect and Tech Lead. "
@@ -55,18 +70,17 @@ class ProposalService:
         Retrieves similar past projects (RAG), asks Gemini for a structured draft grounded
         in them, then computes totals and attaches references in code.
         """
+        started = time.perf_counter()
         references = await self._retrieve_references(request)
 
-        response = await self.client.aio.models.generate_content(
-            model=self.model_name,
-            contents=self._build_prompt(request, references),
-            config=self._generation_config(),
-        )
+        prompt = self._build_prompt(request, references)
+        response, model = await self._generate_with_fallback(prompt)
         if not response.text:
             raise RuntimeError("Gemini returned an empty response.")
 
         draft = ProposalDraft.model_validate_json(response.text)
-        return self._assemble(draft, self._to_reference_models(references))
+        usage = self._usage(response.usage_metadata, model, started, first_token_at=None)
+        return self._assemble(draft, self._to_reference_models(references), usage)
 
     async def stream_proposal(self, request: ProposalRequest) -> AsyncIterator[StreamEvent]:
         """
@@ -77,36 +91,55 @@ class ProposalService:
                       partial (a half-written string, a list whose last item is incomplete).
         - complete:   the final validated ProposalResponse, with computed totals
         """
+        started = time.perf_counter()
         references = await self._retrieve_references(request)
         reference_models = self._to_reference_models(references)
         yield {"event": "references", "data": [r.model_dump() for r in reference_models]}
 
+        prompt = self._build_prompt(request, references)
         text = ""
         emitted: dict[str, Any] = {}
-        stream = await self.client.aio.models.generate_content_stream(
-            model=self.model_name,
-            contents=self._build_prompt(request, references),
-            config=self._generation_config(),
-        )
-        async for chunk in stream:
-            if not chunk.text:
-                continue
-            text += chunk.text
+        usage_metadata = None
+        first_token_at: float | None = None
+        model = self.models[0]
+
+        for attempt, model in enumerate(self.models):
             try:
-                partial = from_json(text, allow_partial="trailing-strings")
-            except ValueError:
-                continue  # chunk boundary fell somewhere unparseable, wait for more text
-            if not isinstance(partial, dict):
-                continue
-            for key, value in partial.items():
-                if emitted.get(key) != value:
-                    emitted[key] = value
-                    yield {"event": "section", "data": {"key": key, "value": value}}
+                stream = await self.client.aio.models.generate_content_stream(
+                    model=model, contents=prompt, config=self._generation_config()
+                )
+                async for chunk in stream:
+                    usage_metadata = chunk.usage_metadata or usage_metadata
+                    if not chunk.text:
+                        continue
+                    if first_token_at is None:
+                        first_token_at = time.perf_counter()
+                    text += chunk.text
+                    try:
+                        partial = from_json(text, allow_partial="trailing-strings")
+                    except ValueError:
+                        continue  # chunk boundary fell somewhere unparseable, wait for more text
+                    if not isinstance(partial, dict):
+                        continue
+                    for key, value in partial.items():
+                        if emitted.get(key) != value:
+                            emitted[key] = value
+                            yield {"event": "section", "data": {"key": key, "value": value}}
+                break
+            except Exception as exc:
+                # Falling back is only safe before the client has seen any output: restarting
+                # mid-draft with another model would splice two different proposals together.
+                is_last = attempt == len(self.models) - 1
+                if text or is_last or not is_retryable(exc):
+                    raise
+                logger.warning("Model %s failed (%s), falling back to %s", model, exc, self.models[attempt + 1])
+                yield {"event": "notice", "data": {"fallback_model": self.models[attempt + 1]}}
 
         if not text:
             raise RuntimeError("Gemini returned an empty response.")
         draft = ProposalDraft.model_validate_json(text)
-        yield {"event": "complete", "data": self._assemble(draft, reference_models).model_dump()}
+        usage = self._usage(usage_metadata, model, started, first_token_at)
+        yield {"event": "complete", "data": self._assemble(draft, reference_models, usage).model_dump()}
 
     # ------------------------------------------------------------------ helpers
 
@@ -141,13 +174,55 @@ GUIDELINES:
 """
 
     @staticmethod
-    def _assemble(draft: ProposalDraft, references: list[ReferenceProject]) -> ProposalResponse:
+    def _assemble(
+        draft: ProposalDraft, references: list[ReferenceProject], usage: Usage | None = None
+    ) -> ProposalResponse:
         return ProposalResponse(
             **draft.model_dump(),
             total_hours_min=sum(f.hours_min for f in draft.features),
             total_hours_max=sum(f.hours_max for f in draft.features),
             references=references,
+            usage=usage,
         )
+
+    async def _generate_with_fallback(self, prompt: str) -> tuple[types.GenerateContentResponse, str]:
+        for attempt, model in enumerate(self.models):
+            try:
+                response = await self.client.aio.models.generate_content(
+                    model=model, contents=prompt, config=self._generation_config()
+                )
+                return response, model
+            except Exception as exc:
+                if attempt == len(self.models) - 1 or not is_retryable(exc):
+                    raise
+                logger.warning("Model %s failed (%s), falling back to %s", model, exc, self.models[attempt + 1])
+        raise RuntimeError("No models configured")  # unreachable: self.models is never empty
+
+    def _usage(self, metadata: Any, model: str, started: float, first_token_at: float | None) -> Usage | None:
+        """Token counts come from Gemini; cost is only estimated if prices are configured."""
+        if metadata is None:
+            return None
+        input_tokens = metadata.prompt_token_count or 0
+        output_tokens = metadata.candidates_token_count or 0
+        thinking_tokens = metadata.thoughts_token_count or 0
+        cost = None
+        if settings.PRICE_INPUT_PER_MTOK or settings.PRICE_OUTPUT_PER_MTOK:
+            cost = (
+                input_tokens * settings.PRICE_INPUT_PER_MTOK
+                + (output_tokens + thinking_tokens) * settings.PRICE_OUTPUT_PER_MTOK
+            ) / 1_000_000
+        usage = Usage(
+            model=model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            thinking_tokens=thinking_tokens,
+            total_tokens=metadata.total_token_count or input_tokens + output_tokens + thinking_tokens,
+            latency_s=round(time.perf_counter() - started, 1),
+            first_token_s=round(first_token_at - started, 1) if first_token_at else None,
+            estimated_cost_usd=round(cost, 5) if cost is not None else None,
+        )
+        logger.info("proposal usage: %s", usage.model_dump_json())
+        return usage
 
     @staticmethod
     def _to_reference_models(references: list[ReferenceContext]) -> list[ReferenceProject]:

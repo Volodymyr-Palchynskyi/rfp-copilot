@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 
-from app.api.deps import get_proposal_service
+from app.api.deps import GenerationSlot, acquire_generation_slot, get_proposal_service
 from app.schemas.proposal import ProposalRequest, ProposalResponse
 from app.services.proposal_service import ProposalService
 
@@ -22,13 +22,16 @@ def _sse(event: str, data: object) -> str:
     "/stream",
     summary="Generate Technical Proposal as a Server-Sent Events stream",
     description="Events: `references` (retrieved past projects), `section` ({key, value}, may be partial), "
-                "`complete` (final response) and `error`.",
+                "`notice` ({fallback_model}, primary model failed), `complete` (final response) and `error`.",
     response_class=StreamingResponse,
 )
 async def stream_proposal(
     request: ProposalRequest,
     service: ProposalService = Depends(get_proposal_service),
+    slot: GenerationSlot = Depends(acquire_generation_slot),
 ) -> StreamingResponse:
+    slot.hand_over_to_stream()
+
     async def events():
         try:
             async for item in service.stream_proposal(request):
@@ -38,6 +41,8 @@ async def stream_proposal(
         except Exception:
             logger.exception("Proposal streaming failed")
             yield _sse("error", {"detail": "Failed to generate proposal. Please try again."})
+        finally:
+            slot.release()
 
     return StreamingResponse(
         events(),
@@ -57,6 +62,7 @@ async def stream_proposal(
 async def generate_proposal(
     request: ProposalRequest,
     service: ProposalService = Depends(get_proposal_service),
+    _slot: GenerationSlot = Depends(acquire_generation_slot),
 ) -> ProposalResponse:
     try:
         return await service.generate_proposal(request)

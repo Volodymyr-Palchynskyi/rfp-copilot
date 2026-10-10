@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.api.deps import get_knowledge_service
+from app.api.deps import get_knowledge_service, limit_searches, require_admin
 from app.schemas.knowledge import ChunkHit, IngestResult
 from app.services.knowledge_service import KnowledgeService
 
@@ -14,7 +14,8 @@ router = APIRouter(prefix="/knowledge", tags=["Knowledge base"])
 @router.post(
     "/ingest",
     response_model=IngestResult,
-    summary="Rebuild the vector index from past project documents",
+    summary="Rebuild the vector index from past project documents (requires X-Admin-Token)",
+    dependencies=[Depends(require_admin)],
 )
 async def ingest(service: KnowledgeService = Depends(get_knowledge_service)) -> IngestResult:
     try:
@@ -30,6 +31,7 @@ async def ingest(service: KnowledgeService = Depends(get_knowledge_service)) -> 
     "/search",
     response_model=list[ChunkHit],
     summary="Semantic search over past projects (debugging and transparency)",
+    dependencies=[Depends(limit_searches)],
 )
 async def search(
     q: str = Query(min_length=3, description="Natural language query"),

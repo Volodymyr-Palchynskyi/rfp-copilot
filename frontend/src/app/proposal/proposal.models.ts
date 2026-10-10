@@ -50,10 +50,22 @@ export interface ProposalDraft {
   estimation_basis: string;
 }
 
+export interface Usage {
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  thinking_tokens: number;
+  total_tokens: number;
+  latency_s: number;
+  first_token_s: number | null;
+  estimated_cost_usd: number | null;
+}
+
 export interface ProposalResponse extends ProposalDraft {
   total_hours_min: number;
   total_hours_max: number;
   references: ReferenceProject[];
+  usage: Usage | null;
 }
 
 /**
@@ -74,5 +86,6 @@ export interface PartialDraft {
 export type StreamEvent =
   | { event: 'references'; data: ReferenceProject[] }
   | { event: 'section'; data: { key: keyof PartialDraft; value: unknown } }
+  | { event: 'notice'; data: { fallback_model: string } }
   | { event: 'complete'; data: ProposalResponse }
   | { event: 'error'; data: { detail: string } };

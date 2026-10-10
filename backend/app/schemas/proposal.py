@@ -1,17 +1,22 @@
 from typing import Literal
 from pydantic import BaseModel, Field
 
+from app.core.config import settings
+
 
 # ==============================================================================
 # 1. INCOMING REQUEST (Payload from Angular Frontend Form)
 # ==============================================================================
 class ProposalRequest(BaseModel):
     client_name: str = Field(
+        min_length=1,
+        max_length=120,
         description="Client company name or stakeholder name",
         examples=["Acme Corp"]
     )
     project_description: str = Field(
         min_length=20,
+        max_length=settings.MAX_BRIEF_CHARS,
         description="Raw requirements, client RFP notes, or project description"
     )
     budget_level: Literal["budget", "standard", "enterprise"] = Field(
@@ -86,6 +91,21 @@ class ProposalDraft(BaseModel):
     )
 
 
+class Usage(BaseModel):
+    """Cost and latency of one generation, for observability and the README numbers."""
+
+    model: str
+    input_tokens: int
+    output_tokens: int
+    thinking_tokens: int
+    total_tokens: int
+    latency_s: float = Field(description="Wall time from request start to the final event")
+    first_token_s: float | None = Field(description="Time until the model produced its first token")
+    estimated_cost_usd: float | None = Field(
+        description="None unless PRICE_INPUT_PER_MTOK / PRICE_OUTPUT_PER_MTOK are configured"
+    )
+
+
 class ProposalResponse(ProposalDraft):
     total_hours_min: int = Field(description="Sum of feature hours_min, computed server-side")
     total_hours_max: int = Field(description="Sum of feature hours_max, computed server-side")
@@ -93,3 +113,4 @@ class ProposalResponse(ProposalDraft):
         default_factory=list,
         description="Past projects retrieved from the knowledge base for this request",
     )
+    usage: Usage | None = None

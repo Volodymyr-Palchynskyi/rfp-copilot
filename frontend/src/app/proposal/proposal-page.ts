@@ -3,6 +3,9 @@ import { DecimalPipe } from '@angular/common';
 import { ProposalStreamService } from './proposal-stream.service';
 import { Budget, PartialDraft, ProposalResponse, ReferenceProject } from './proposal.models';
 
+// Keep in sync with MAX_BRIEF_CHARS on the backend.
+const MAX_BRIEF_CHARS = 4000;
+
 type Status = 'idle' | 'running' | 'done' | 'error' | 'cancelled';
 
 interface Sample {
@@ -44,6 +47,7 @@ export class ProposalPage {
   private abort: AbortController | null = null;
 
   protected readonly samples = SAMPLES;
+  protected readonly maxBriefChars = MAX_BRIEF_CHARS;
   protected readonly budgets: Budget[] = ['budget', 'standard', 'enterprise'];
 
   // form
@@ -55,6 +59,7 @@ export class ProposalPage {
   // stream state
   protected readonly status = signal<Status>('idle');
   protected readonly error = signal<string | null>(null);
+  protected readonly fallbackModel = signal<string | null>(null);
   protected readonly references = signal<ReferenceProject[]>([]);
   protected readonly draft = signal<PartialDraft>({});
   protected readonly final = signal<ProposalResponse | null>(null);
@@ -94,6 +99,7 @@ export class ProposalPage {
     this.draft.set({});
     this.final.set(null);
     this.error.set(null);
+    this.fallbackModel.set(null);
     this.status.set('running');
 
     const abort = new AbortController();
@@ -114,6 +120,9 @@ export class ProposalPage {
         switch (event.event) {
           case 'references':
             this.references.set(event.data);
+            break;
+          case 'notice':
+            this.fallbackModel.set(event.data.fallback_model);
             break;
           case 'section':
             this.draft.update((draft) => ({ ...draft, [event.data.key]: event.data.value }));

@@ -9,7 +9,7 @@ Two suites, run on two case sets: the 20 tuned briefs in `cases.json` and 15 hel
 | `out_of_domain` | 4 | nothing in the knowledge base applies, the system should abstain |
 
 ```bash
-uv run python -m evals retrieval    # embeddings only, cheap, run on every retrieval change
+uv run python -m evals retrieval    # embeddings plus one reranker (LLM) call per brief
 uv run python -m evals generation   # 2 x 20 Gemini calls (RAG vs no RAG), takes a few minutes
 uv run python -m evals retrieval --set heldout
 uv run python -m evals generation --set heldout   # 2 x 15 calls
@@ -37,31 +37,33 @@ being held-out and should be replaced with fresh briefs.
 
 ## Results history
 
-| step | tuned set in range | held-out in range | fresh in range |
-|---|---|---|---|
-| no RAG (calibrated prompt) | 15% | 13% | 15% |
-| similarity threshold 0.70 | 75% | 60% | not run yet |
-| + LLM reranker | 95% | 80% | 38% |
+Share of briefs in the expected range, median error (single runs, temperature 0.2):
 
-The threshold-only run on the fresh set was interrupted by the daily API quota (250 requests per model), so that
-cell is empty rather than filled with a partial result. Re-run with `--set fresh --no-rerank`.
+| set | no RAG | threshold | reranker | reranker + floor 0.65 |
+|---|---|---|---|---|
+| tuned (20) | 15%, 56% | 75%, 14% | 95%, 8% | not run |
+| held-out (15) | 13%, 53% | 60%, 26% | 80%, 20% | not run |
+| fresh (13) | 15%, 57% | 38%, 35% | 38%, 34% | not run |
+| fresh2 (14) | 7%, 57% | 50%, 33% | 79%, 12% | 50%, 23% |
 
-Why the reranker numbers fall: the tuned set was used to design everything, the held-out set's failures motivated
-the reranker, and the fresh set (13 briefs with stricter labels) is the first clean test. On it, retrieval-level
-metrics look like this: threshold 100% recall / 100% precision / 100% abstention, reranker 100% / 90% / 50%. For the
-four "nothing reusable" briefs the reranker kept weak analogies (a healthcare app for a leave-request tool, an LMS and
-an analytics product for a podcast platform) and RAG ended at 0% in range, worse than no RAG (50%).
-Fresh-set categories are defined more strictly: `close_analog` (most of the scope maps to one past project),
-`partial_overlap` (one or two substantial modules map, the rest is new), `no_analog` (only generic features or the
-same industry in common).
+How the sets were used:
 
-Archived threshold-only reports for the earlier sets: `results/generation_v2_threshold.*`,
-`results/generation_heldout_threshold.*`.
+- **tuned**: everything was designed on it. **held-out**: its failures motivated the reranker, so it is no longer clean.
+- **fresh**: the first clean test of the reranker. **fresh2**: reserved in advance for the combined-rule experiment.
+- The combined rule (judge >= 2 AND cosine >= 0.65, the value fixed before the run) was run on fresh2 only, once, and
+  lost to the judge alone (50% against 79%), so it was rejected. It stays in the code behind
+  `RERANK_REQUIRE_SIMILARITY` (default 0, off).
+- All sets are now spent: every configuration has been run on `fresh` and `fresh2`. A new honest measurement needs
+  new briefs.
 
-## Reserved set: `fresh2`
+Fresh-set categories are defined strictly: `close_analog` (most of the scope maps to one past project),
+`partial_overlap` (one or two substantial modules map, the rest is new), `no_analog` (only generic features or the same
+industry in common).
 
-`cases_fresh2.json` (14 briefs: 4 close, 5 partial, 5 no analog, same strict category definitions as `fresh`) was
-written on 2026-10-10 **before any run**, with its expected hour ranges fixed in advance. It is reserved for the
-next planned experiment: a combined selection rule (similarity floor AND reranker agreement) against the current
-rerank-only and threshold-only rules. Do not run it to explore or to tune; run each candidate configuration on it once
-and report all of them. After that it is spent like the other sets.
+Run a configuration with `--selection threshold|rerank|combined`, and add `--modes rag` to skip the no-RAG baseline when
+it already exists (it does not depend on the selection rule). Reports land in `results/`, with the selection name as a
+suffix (`generation_fresh2_combined.md`).
+
+Retrieval-level view on fresh2 (`retrieval --set fresh2`): threshold recall 56% / precision 100% / abstention 80%,
+reranker 100% / 75% / 60%, combined 100% / 75% / 100%. Precision counts every kept project that is not the single
+expected one, so a reasonable extra analogy (for instance a marketplace for a gig-work shift board) is scored as a miss.

@@ -63,13 +63,14 @@ def _score(case: Case, response: ProposalResponse, names: dict[str, str]) -> dic
     }
 
 
-async def run(case_set: str = "main", variant: str = "") -> None:
+async def run(case_set: str = "main", variant: str = "", modes: str = "both") -> None:
     cases = load_cases(case_set)
     names = _corpus_names()
 
     knowledge = KnowledgeService()
     await knowledge.ensure_indexed()
-    services = {"rag": ProposalService(knowledge=knowledge), "baseline": ProposalService(knowledge=None)}
+    all_services = {"rag": ProposalService(knowledge=knowledge), "baseline": ProposalService(knowledge=None)}
+    services = {name: svc for name, svc in all_services.items() if modes in ("both", name)}
 
     semaphore = asyncio.Semaphore(CONCURRENCY)
 

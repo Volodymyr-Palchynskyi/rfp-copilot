@@ -8,23 +8,31 @@ Turns a client brief into a structured technical proposal (architecture, tech st
 
 ## Why this is more than an API wrapper
 
-An LLM asked to estimate a project from scratch is confidently wrong: with a naive prompt it quoted roughly **500 hours for projects in the 2,000 to 7,000 hour range**, and even after prompt calibration it still lands at 1,000 to 2,000 hours for them. Retrieval over past projects fixes most of that. The evals measure it on two sets: 20 briefs I tuned the system on, and 15 held-out briefs written afterwards.
+An LLM asked to estimate a project from scratch is confidently wrong: with a naive prompt it quoted roughly **500 hours for projects in the 2,000 to 7,000 hour range**, and even after prompt calibration it still lands at 1,000 to 2,000 hours for them. Retrieval over past projects fixes much of that. The evals measure it on four sets of briefs: 20 I tuned on, 15 held-out ones written afterwards, and two fresh sets (13 and 14 briefs) written later with stricter labels.
 
-| expected range hit, median error | no RAG | RAG, similarity threshold | RAG + LLM reranker |
-|---|---|---|---|
-| tuned set (20 briefs) | 15%, 56% | 75%, 14% | **95%, 8%** |
-| held-out set (15 briefs) | 13%, 53% | 60%, 26% | **80%, 20%** |
-| held-out, partial overlap with a past project | 0%, 59% | 40%, 48% | **100%, 19%** |
-| held-out, nothing similar in the corpus | 25%, 45% | 50%, 33% | 50%, 36% |
-| fresh set (13 briefs, stricter labels) | 15%, 57% | not run yet | 38%, 34% |
-| fresh, partial overlap | 0%, 63% | not run yet | 25%, 39% |
-| fresh, nothing reusable | 50%, 33% | not run yet | **0%, 52%** |
+Cells are "share of briefs whose estimate lands in the expected range, median error":
 
-The held-out set is what keeps this honest. The threshold-only pipeline dropped from 75% to 60% on it, so part of the first result was fitting. The failures were instructive: two of three partial-overlap misses were retrieval misses where no cosine threshold could separate relevant projects (best score 0.675) from irrelevant ones (up to 0.690). That motivated the reranker, which restored recall on the held-out set (82% to 100%) and took partial-overlap briefs from 40% to 100% in range.
+| | no RAG | similarity threshold | LLM reranker | reranker + similarity floor |
+|---|---|---|---|---|
+| tuned set (20) | 15%, 56% | 75%, 14% | **95%, 8%** | not run |
+| held-out set (15) | 13%, 53% | 60%, 26% | **80%, 20%** | not run |
+| fresh set (13) | 15%, 57% | 38%, 35% | 38%, 34% | not run |
+| fresh2 set (14), pre-registered | 7%, 57% | 50%, 33% | **79%, 12%** | 50%, 23% |
+| fresh2, partial overlap (5) | 0%, 62% | 20%, 61% | **80%, 8%** | 60%, 16% |
+| fresh2, nothing reusable (5) | 20%, 44% | 40%, 34% | 60%, 37% | 0%, 48% |
 
-**The reranker's gain did not hold on a fresh set.** I then wrote 13 new briefs with stricter labels (close, partial, and "nothing reusable" briefs that share only an industry or generic features with a past project, such as a leave-request tool or a podcast host). With the reranker, only 38% landed in range, and for the "nothing reusable" briefs RAG was *worse than no RAG* (0% against 50%): the judge accepted weak analogies (a healthcare app for a leave tool, an LMS for a podcast platform) and those references pulled estimates off. At the retrieval level, the plain threshold was perfect on this set (100% recall, precision and abstention) even though it missed relevant projects on the held-out set, so neither selection method is robust yet. The threshold-only generation run on this set was cut off by the daily API quota (250 requests per model) and has not been repeated; the cells above are marked accordingly. What this really shows is that 13 to 20 briefs per set is too few to pick a winner, and that each set I tune on stops being a test.
+What the numbers say, and how much to trust them:
 
-Caveats you should know before trusting these numbers (details in [Known limitations](#known-limitations) and [`backend/evals`](backend/evals/README.md)): the reranker was built after I had seen the held-out failures, so that set is no longer pristine, and the fresh set is the only clean test of it; expected hour ranges are my judgement; runs are single samples (the no-RAG row moved by several points between two runs of the same configuration).
+- **Retrieval beats no retrieval on every set**, by 23 to 80 points. That is the one conclusion I would defend.
+- **The reranker was never worse than the threshold** (+20, +20, 0 and +29 points across the four sets). On the two sets that were still clean when I measured, it reached 59% against 44% (16 of 27 briefs against 12 of 27): a difference of four documents. Suggestive, not proven.
+- **Where it helps is partial overlap.** A cosine threshold cannot separate a project that shares one module from an unrelated one (on the held-out set the best relevant score was 0.675, the best irrelevant 0.690), so it returns nothing and the estimate falls back to the model's low default. On fresh2 the threshold found no reference for four of five partial-overlap briefs, and for one of them estimated 1,692 hours against an expected 4,200 to 6,800; with the reranker the same brief came out at 5,590.
+- **The numbers drift between sets.** The reranker scored 95%, 80%, 38% and 79%. The first set was used to build the system, the second shaped the reranker, and the fresh ones are small, so I treat the spread as noise plus fitting rather than as an estimate of real accuracy.
+
+**A pre-registered idea that failed.** Before running fresh2 I fixed a "combined" rule (keep a project only if the judge scores it 2 or more **and** its cosine score is at least 0.65) and wrote down that I would run each configuration once and report all of them. The hypothesis was that it would beat the judge alone. It did not: 50% against 79%. The floor removed weak references that turned out to matter: for the warehouse stock-counting brief the combined rule kept none and estimated 1,155 hours (expected 1,800 to 3,200), while the judge kept one weak analogy and estimated 1,990. I read that as a hint, not a result: references with real hours may partly act as a **scale anchor** even when they are not true analogies, which would also explain why "nothing reusable" briefs sometimes improve with a weak reference. It is testable (give the model unrelated references and see what happens) and I have not tested it. The judge alone stays the default; the combined rule stays in the code behind `RERANK_REQUIRE_SIMILARITY` (default 0) as a tested and rejected option.
+
+**The stubborn failure.** One brief (a real-time collaborative whiteboard, expected 3,000 to 5,500 hours) comes out near 1,000 hours with every configuration. When nothing in the corpus resembles the work, retrieval has nothing to offer, and the model underestimates hard problems such as real-time collaboration. That is what a larger and more varied knowledge base would address, not a better selection rule.
+
+Caveats you should know before trusting any of this (details in [Known limitations](#known-limitations) and [`backend/evals`](backend/evals/README.md)): all five sets are small (one brief moves a percentage by 5 to 10 points); the expected hour ranges are my judgement, not real project outcomes; every cell is a single run at temperature 0.2; and all four later sets have now been looked at, so a new honest measurement needs new briefs.
 
 ## Architecture
 
@@ -81,7 +89,7 @@ cd frontend && npx ng test --watch=false                        # 14 tests (SSE 
 ```bash
 cd backend
 uv run pytest                          # 51 tests: rate limits, concurrency, model fallback, reranking, auth, data integrity
-uv run python -m evals retrieval       # embeddings only, cheap
+uv run python -m evals retrieval       # embeddings plus one reranker (LLM) call per brief, needs API quota
 uv run python -m evals generation      # 40 Gemini calls (RAG vs no RAG), a few minutes
 ```
 
@@ -105,7 +113,7 @@ Stop the API server before running evals locally: the embedded Qdrant store can 
 
 **Abuse protection for a public demo.** Per-IP sliding-window rate limit, a cap on concurrent generations (non-blocking: 503 instead of queueing), a 4,000-character brief limit, and an admin token on the index rebuild endpoint (disabled when no token is configured). nginx overwrites `X-Forwarded-For`, and the API port is not published, which is what makes the client IP the rate limiter sees trustworthy.
 
-**LLM reranker instead of a smarter threshold.** Similarity scores of relevant and irrelevant projects overlap, so no cut-off works. The reranker judges *reusable modules*, one call per request for all candidates (about 3.6 s extra, low thinking effort), with the reason shown in the UI so the user can overrule it. Trade-offs: extra latency and cost, and it is more lenient than my eval labels. It keeps a reference for most "nothing similar" briefs (abstention 25% on the tuned set, 0% on the held-out set) because a past marketplace really does contain reusable checkout and payment modules. End-to-end it helped on the tuned and held-out sets but not on the fresh one (see table). It also weakens the "abstain when nothing applies" behaviour, and several over-estimates trace back to weak analogies it accepted (ski rental 2,190 h against 700 to 1,500; podcast platform 3,565 h against 1,500 to 3,000). Treat it as unproven: a stricter rubric, or requiring both a similarity floor and the judge's agreement, are the next things to test on yet another fresh set.
+**LLM reranker instead of a smarter threshold.** Similarity scores of relevant and irrelevant projects overlap, so no cut-off works. The reranker judges *reusable modules*, one call per request for all candidates (about 3.6 s extra, low thinking effort), with the reason shown in the UI so the user can overrule it. Trade-offs: extra latency and cost, and it is more lenient than my eval labels. It keeps a reference for most "nothing similar" briefs (abstention 25% on the tuned set, 0% on the held-out set) because a past marketplace really does contain reusable checkout and payment modules. End-to-end it was never worse than the threshold and was clearly better on three of four sets, but its gain varies a lot between sets (see the table). It also weakens the "abstain when nothing applies" behaviour, and several over-estimates trace back to weak analogies it accepted (ski rental 2,190 h against 700 to 1,500; podcast platform 3,565 h against 1,500 to 3,000). I tried to make it stricter with a pre-registered similarity floor on top of the judge, and that made results worse on fresh2 (50% against 79%), so the judge alone is the default.
 
 **CI runs everything that does not need an API key.** On every push: backend tests, frontend tests and production build, and a smoke test that boots the whole Docker stack with no key and checks the proxy, the admin guard and the 503 path. Evals are deliberately not in CI: they cost real quota and are slow. Offline tests also validate the hand-written data (every past project's scope hours must add up to its `total_hours`, eval sets must reference real projects). That check exists because it caught a real mistake of mine: one project said 3,400 hours in its metadata while its scope summed to 3,000, and the model had been shown both numbers. Earlier eval results used the inconsistent file; the effect is small (one of eight projects) but it means those numbers are not exactly reproducible.
 
@@ -113,9 +121,9 @@ Stop the API server before running evals locally: the embedded Qdrant store can 
 
 ## Known limitations
 
-- **Briefs with nothing reusable in the corpus are the weakest case.** With the reranker, none of the fresh "nothing reusable" briefs landed in range (0%), worse than no RAG (50%), because weak analogies mislead the estimate. The first thing to try is a stricter judge rubric or a combined similarity-and-judge rule, measured on new briefs.
+- **Briefs with nothing reusable in the corpus are the weakest case, and the answers there are inconsistent.** Across the two fresh sets the "nothing reusable" briefs landed in range 0% of the time on one and 60% on the other with the same reranker. A real-time collaboration brief is underestimated by about 3x under every configuration: when nothing in the corpus resembles hard work, the model's low default wins. A larger and more varied knowledge base is the real fix.
 - **The knowledge base is synthetic.** 8 hand-written past projects stand in for real, NDA-covered estimates. Retrieval quality on a larger, messier corpus is untested.
-- **The eval sets are small and self-authored.** 20 tuned briefs, 15 held-out ones (no longer pristine, I used its failures to design the reranker) and 13 fresh ones. Each set is small enough that one brief moves a percentage by 5 to 10 points. Expected hour ranges are my judgement, not real project outcomes. One run per brief at temperature 0.2, so differences of a few points are noise.
+- **The eval sets are small and self-authored.** 20 tuned briefs, 15 held-out ones (no longer pristine, I used its failures to design the reranker) and two fresh sets of 13 and 14 briefs (both spent: all configurations have been run on them). Each set is small enough that one brief moves a percentage by 5 to 10 points. Expected hour ranges are my judgement, not real project outcomes. One run per brief at temperature 0.2, so differences of a few points are noise.
 - **Rate limits are in memory.** Fine for one process. With several instances they need to move to Redis.
 - **Latency.** Reranking adds about 3.6 s before generation starts, and the first proposal token then takes 10 to 20 seconds because the model spends about as many thinking tokens as output tokens. A lower thinking budget would cut it, at an unmeasured quality cost.
 - **Not built:** auth and multi-tenancy, persistence of generated proposals, PDF export, the agent-with-human-approval phase.

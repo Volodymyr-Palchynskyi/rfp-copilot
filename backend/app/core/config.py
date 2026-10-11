@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     RERANK_TIMEOUT_S: int = 30
     RERANK_MIN_RELEVANCE: int = 2  # judge scale 0-3, keep projects scoring at least this
     RAG_CANDIDATE_MIN_SCORE: float = 0.60
+    # Combined rule: when > 0 a project must ALSO reach this cosine score to survive the judge.
+    # 0 = judge alone. Pre-registered at 0.65 for the fresh2 experiment (see evals/README.md).
+    RERANK_REQUIRE_SIMILARITY: float = 0.0
     RAG_MAX_CANDIDATES: int = 5
     RAG_MIN_SCORE: float = 0.70  # chosen by the retrieval eval threshold sweep (evals/results/retrieval.md)
 

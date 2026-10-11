@@ -10,7 +10,7 @@ from statistics import mean
 
 from app.services.knowledge_service import MAX_REFERENCE_PROJECTS, KnowledgeService
 from app.core.config import settings
-from evals.common import CATEGORIES, Case, load_cases, md_table, pct, result_name, save_report
+from evals.common import CATEGORIES, COMBINED_MIN_SIMILARITY, Case, load_cases, md_table, pct, result_name, save_report
 
 THRESHOLDS = [0.50, 0.55, 0.60, 0.65, 0.70, 0.75]
 
@@ -54,14 +54,16 @@ def _threshold_metrics(cases: list[Case], rankings: dict[str, list[tuple[str, fl
     }
 
 
-async def _selection_metrics(service: KnowledgeService, cases: list[Case], rerank: bool) -> dict:
+async def _selection_metrics(
+    service: KnowledgeService, cases: list[Case], rerank: bool, min_similarity: float = 0.0
+) -> dict:
     """End-to-end reference selection as the pipeline does it, with or without the LLM reranker."""
     semaphore = asyncio.Semaphore(4)
 
     async def one(case: Case) -> tuple[Case, list[str], float]:
         async with semaphore:
             start = time.perf_counter()
-            refs = await service.find_references(case.brief, rerank=rerank)
+            refs = await service.find_references(case.brief, rerank=rerank, min_similarity=min_similarity)
             return case, [r.project_id for r in refs], time.perf_counter() - start
 
     results = await asyncio.gather(*(one(c) for c in cases))
@@ -89,6 +91,7 @@ async def run(case_set: str = "main", variant: str = "") -> None:
     selection = {
         "threshold": await _selection_metrics(service, cases, rerank=False),
         "rerank": await _selection_metrics(service, cases, rerank=True),
+        "combined": await _selection_metrics(service, cases, rerank=True, min_similarity=COMBINED_MIN_SIMILARITY),
     }
     sweep = [_threshold_metrics(cases, rankings, t) for t in THRESHOLDS]
 
@@ -140,16 +143,17 @@ async def run(case_set: str = "main", variant: str = "") -> None:
             for name, m in selection.items()
         ],
     )
-    wrong = [
-        (c.id, c.category, kept)
-        for c in cases
-        for kept in [selection["rerank"]["kept"][c.id]]
-        if (c.expected_projects and not any(pid in c.expected_projects for pid in kept))
-        or (not c.expected_projects and kept)
-        or any(pid not in c.expected_projects for pid in kept) and c.expected_projects
-    ]
-    if wrong:
-        md += "\n\nReranker mistakes (id, category, kept): " + "; ".join(f"{i} {cat} {k}" for i, cat, k in wrong)
+    for mode in ("rerank", "combined"):
+        wrong = [
+            (c.id, c.category, kept)
+            for c in cases
+            for kept in [selection[mode]["kept"][c.id]]
+            if (c.expected_projects and not any(pid in c.expected_projects for pid in kept))
+            or (not c.expected_projects and kept)
+            or (c.expected_projects and any(pid not in c.expected_projects for pid in kept))
+        ]
+        if wrong:
+            md += f"\n\nMistakes of `{mode}` (id, category, kept): " + "; ".join(f"{i} {cat} {k}" for i, cat, k in wrong)
     if misses:
         md += "\n\n## Misses (no relevant project in top 3)\n\n"
         md += md_table(["case", "expected", "got"], [[i, ", ".join(e), g] for i, e, g in misses])

@@ -93,3 +93,33 @@ async def test_rerank_can_be_bypassed_per_call(monkeypatch):
     refs = await make_service(monkeypatch, RAW, reranker).find_references("brief", rerank=False)
 
     assert [r.project_id for r in refs] == ["a"] and reranker.calls == 0
+
+
+async def test_combined_rule_requires_similarity_as_well_as_judge_agreement(monkeypatch):
+    # The judge likes everything; the combined floor (0.65) drops b (0.68 passes) but c (0.62) must go.
+    reranker = FakeReranker({"a": 3, "b": 3, "c": 3})
+    service = make_service(monkeypatch, RAW, reranker)
+
+    refs = await service.find_references("brief", min_similarity=0.65)
+
+    assert [r.project_id for r in refs] == ["a", "b"]
+
+
+async def test_combined_rule_floor_comes_from_settings_by_default(monkeypatch):
+    reranker = FakeReranker({"a": 3, "b": 3, "c": 3})
+    service = make_service(monkeypatch, RAW, reranker)
+    monkeypatch.setattr(settings, "RERANK_REQUIRE_SIMILARITY", 0.70)
+
+    refs = await service.find_references("brief")
+
+    assert [r.project_id for r in refs] == ["a"]
+
+
+async def test_explicit_zero_floor_overrides_the_setting(monkeypatch):
+    reranker = FakeReranker({"a": 3, "c": 3})
+    service = make_service(monkeypatch, RAW, reranker)
+    monkeypatch.setattr(settings, "RERANK_REQUIRE_SIMILARITY", 0.70)
+
+    refs = await service.find_references("brief", min_similarity=0.0)
+
+    assert {r.project_id for r in refs} == {"a", "c"}

@@ -62,7 +62,9 @@ class KnowledgeService:
             for score, p in raw
         ]
 
-    async def find_references(self, query: str, rerank: bool | None = None) -> list[ReferenceContext]:
+    async def find_references(
+        self, query: str, rerank: bool | None = None, min_similarity: float | None = None
+    ) -> list[ReferenceContext]:
         """
         Pick past projects to ground an estimate on.
 
@@ -78,13 +80,16 @@ class KnowledgeService:
             if not candidates:
                 return []
             try:
-                return await self._rerank(query, candidates)
+                floor = settings.RERANK_REQUIRE_SIMILARITY if min_similarity is None else min_similarity
+                return await self._rerank(query, candidates, floor)
             except Exception:
                 logger.exception("Reranking failed, falling back to the similarity threshold")
 
         return self._group(raw, settings.RAG_MIN_SCORE)[:MAX_REFERENCE_PROJECTS]
 
-    async def _rerank(self, query: str, candidates: list[ReferenceContext]) -> list[ReferenceContext]:
+    async def _rerank(
+        self, query: str, candidates: list[ReferenceContext], min_similarity: float = 0.0
+    ) -> list[ReferenceContext]:
         judgements = await self._reranker.judge(
             query,
             [
@@ -101,7 +106,7 @@ class KnowledgeService:
         kept = []
         for c in candidates:
             judgement = judgements.get(c.project_id)
-            if judgement and judgement.relevance >= settings.RERANK_MIN_RELEVANCE:
+            if judgement and judgement.relevance >= settings.RERANK_MIN_RELEVANCE and c.score >= min_similarity:
                 c.reason = judgement.reason
                 kept.append((judgement.relevance, c))
         kept.sort(key=lambda item: (item[0], item[1].score), reverse=True)

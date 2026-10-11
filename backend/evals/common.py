@@ -6,6 +6,9 @@ from pathlib import Path
 EVALS_DIR = Path(__file__).parent
 RESULTS_DIR = EVALS_DIR / "results"
 
+# Pre-registered before the fresh2 experiment and not to be tuned on it.
+COMBINED_MIN_SIMILARITY = 0.65
+
 CATEGORIES = ["close_analog", "partial_overlap", "out_of_domain", "no_analog"]
 
 

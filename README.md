@@ -35,6 +35,8 @@ All of these are a real generation with `gemini-3.7-flash` (not mocked), taken f
 
 </details>
 
+**Also by me:** [doc-extractor](https://github.com/Volodymyr-Palchynskyi/doc-extractor), a different problem with the same habits: extracting invoice data from PDFs, checking the arithmetic in code instead of trusting the model, and a review UI. Its evals use synthetic documents with exact ground truth and a sealed test split, which is a direct lesson from the held-out results below.
+
 ## Why this is more than an API wrapper
 
 An LLM asked to estimate a project from scratch is confidently wrong: with a naive prompt it quoted roughly **500 hours for projects in the 2,000 to 7,000 hour range**, and even after prompt calibration it still lands at 1,000 to 2,000 hours for them. Retrieval over past projects fixes much of that. The evals measure it on four sets of briefs: 20 I tuned on, 15 held-out ones written afterwards, and two fresh sets (13 and 14 briefs) written later with stricter labels.

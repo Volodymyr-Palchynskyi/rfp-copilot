@@ -6,6 +6,35 @@ Turns a client brief into a structured technical proposal (architecture, tech st
 
 **Stack:** Angular 22 (signals, SSE over `fetch`) · FastAPI · Gemini (structured output + embeddings) · Qdrant · Docker Compose
 
+## Screenshots
+
+All of these are a real generation with `gemini-3.7-flash` (not mocked), taken from the Docker stack by a Playwright script, for the "Fleet tracking" sample brief.
+
+**The result.** The estimate is grounded in a past project, and the panel at the top says which one and why (the judge's reason). Effort and duration, Markdown export and the sections of the proposal follow.
+
+![A finished proposal: the past project it is based on with the reason, effort and duration, export buttons and the executive summary](docs/images/03-result.png)
+
+**Streaming.** The proposal appears section by section instead of after a 30 second wait. Here the scope table is still filling in: the last row has no hours yet, "Writing..." is pulsing and the form shows Cancel.
+
+![The proposal mid-generation: tech stack complete, scope table with a half-written last row, Writing indicator, Cancel button](docs/images/02-streaming.png)
+
+<details>
+<summary>More screens: empty state, scope table, risks and cost line</summary>
+
+**Start.** Three sample briefs, a character counter and a disabled button until the brief is long enough.
+
+![Empty form with sample brief chips](docs/images/01-start.png)
+
+**Scope and estimates.** Every feature has a complexity and an hour range; the totals above are computed by the server from these rows, not by the model.
+
+![Scope and estimates table with complexity badges and hour ranges](docs/images/04-scope-table.png)
+
+**Risks, how the estimate was derived, and what it cost.** The model has to explain which reference project it used and how it adjusted the numbers. The last line is the real token count and latency of this generation.
+
+![Risks, the explanation of how the estimate was derived and the token and latency line](docs/images/05-risks-basis-usage.png)
+
+</details>
+
 ## Why this is more than an API wrapper
 
 An LLM asked to estimate a project from scratch is confidently wrong: with a naive prompt it quoted roughly **500 hours for projects in the 2,000 to 7,000 hour range**, and even after prompt calibration it still lands at 1,000 to 2,000 hours for them. Retrieval over past projects fixes much of that. The evals measure it on four sets of briefs: 20 I tuned on, 15 held-out ones written afterwards, and two fresh sets (13 and 14 briefs) written later with stricter labels.
@@ -81,7 +110,7 @@ Open <http://localhost:8081> (change with `FRONTEND_PORT`). The backend port is 
 ```bash
 cd backend && uv sync && uv run uvicorn app.main:app --reload   # http://localhost:8000/docs
 cd frontend && npm ci && npx ng serve                           # http://localhost:4200
-cd frontend && npx ng test --watch=false                        # 14 tests (SSE parser, Markdown export, app shell)
+cd frontend && npx ng test --watch=false                        # 18 tests (SSE parser, Markdown export, running totals, app shell)
 ```
 
 **Tests and evals**

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { DecimalPipe } from '@angular/common';
 import { markdownFileName, toMarkdown } from './markdown';
 import { ProposalStreamService } from './proposal-stream.service';
+import { runningTotals } from './totals';
 import { Budget, PartialDraft, ProposalResponse, ReferenceProject } from './proposal.models';
 
 // Keep in sync with MAX_BRIEF_CHARS on the backend.
@@ -77,11 +78,7 @@ export class ProposalPage {
   protected readonly totals = computed(() => {
     const final = this.final();
     if (final) return { min: final.total_hours_min, max: final.total_hours_max };
-    const features = this.draft().features ?? [];
-    return {
-      min: features.reduce((sum, f) => sum + (f.hours_min ?? 0), 0),
-      max: features.reduce((sum, f) => sum + (f.hours_max ?? 0), 0),
-    };
+    return runningTotals(this.draft().features);
   });
 
   protected useSample(sample: Sample): void {

@@ -176,3 +176,7 @@ frontend/
   nginx.conf            static hosting + API proxy with buffering off
 docker-compose.yml
 ```
+
+## License
+
+[MIT](LICENSE). The license covers this repository's own code and data. Dependencies keep their own licenses.
